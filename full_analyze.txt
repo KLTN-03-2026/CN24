@@ -1,0 +1,58 @@
+Analyzing ride_now_khoaluan...                                  
+
+   info - The constant name 'searching_driver' isn't a lowerCamelCase identifier - lib\models\ride_request_model.dart:5:3 - constant_identifier_names
+   info - The constant name 'driver_assigned' isn't a lowerCamelCase identifier - lib\models\ride_request_model.dart:6:3 - constant_identifier_names
+   info - The constant name 'on_the_way' isn't a lowerCamelCase identifier - lib\models\ride_request_model.dart:10:3 - constant_identifier_names
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:50:48 - unnecessary_cast
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:61:52 - unnecessary_cast
+warning - The value of the local variable 'since' isn't used - lib\repositories\ride_repository.dart:67:11 - unused_local_variable
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:80:45 - unnecessary_cast
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:113:64 - unnecessary_cast
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:149:64 - unnecessary_cast
+warning - Unnecessary cast - lib\services\location_service.dart:90:51 - unnecessary_cast
+   info - Don't invoke 'print' in production code - lib\services\matching_service.dart:84:7 - avoid_print
+warning - Unused import: '../models/user_model.dart' - lib\services\ride_service.dart:5:8 - unused_import
+   info - The file name 'OnboardingScreen.dart' isn't a lower_case_with_underscores identifier - lib\views\OnboardingScreen.dart:1:1 - file_names
+   info - Constructors for public widgets should have a named 'key' parameter - lib\views\OnboardingScreen.dart:5:7 - use_key_in_widget_constructors
+   info - Invalid use of a private type in a public API - lib\views\OnboardingScreen.dart:7:3 - library_private_types_in_public_api
+   info - The file name 'SmartRideScreen.dart' isn't a lower_case_with_underscores identifier - lib\views\SmartRideScreen.dart:1:1 - file_names
+   info - Constructors for public widgets should have a named 'key' parameter - lib\views\SmartRideScreen.dart:13:7 - use_key_in_widget_constructors
+   info - Invalid use of a private type in a public API - lib\views\SmartRideScreen.dart:15:3 - library_private_types_in_public_api
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\SmartRideScreen.dart:77:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\SmartRideScreen.dart:235:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\SmartRideScreen.dart:253:35 - deprecated_member_use
+warning - The value of the field '_formKey' isn't used - lib\views\auth\login_view.dart:16:9 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\auth\login_view.dart:89:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\auth\login_view.dart:253:55 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\views\auth\login_view.dart:284:33 - avoid_print
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:216:29 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:217:29 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:233:29 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:234:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\auth\register_view.dart:330:49 - deprecated_member_use
+warning - The value of the field '_locationService' isn't used - lib\views\driver\driver_navigation_screen.dart:26:25 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\driver\widgets\ride_request_card.dart:45:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\activity_view.dart:68:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:177:45 - deprecated_member_use
+warning - The value of the local variable 'durationSeconds' isn't used - lib\views\main\home\customer_home_view.dart:319:17 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:496:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:505:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:571:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:1369:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:1383:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\driver_home_view.dart:157:41 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\views\main\home\driver_home_view.dart:190:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\driver_home_view.dart:206:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\driver_home_view.dart:426:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\profiles\profile_view.dart:183:43 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\views\main\profiles\profile_view.dart:206:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\views\main\profiles\profile_view.dart:208:27 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\profiles\profile_view.dart:266:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\profiles\profile_view.dart:301:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\customer_history_view.dart:86:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\driver_history_view.dart:131:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\driver_history_view.dart:210:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\driver_history_view.dart:222:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\trip_detail_view.dart:38:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\widgets\trip_history_card.dart:29:35 - deprecated_member_use
+

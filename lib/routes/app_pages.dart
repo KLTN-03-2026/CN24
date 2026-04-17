@@ -4,6 +4,7 @@ import 'package:ride_now_khoaluan/views/OnboardingScreen.dart';
 import 'package:ride_now_khoaluan/views/SmartRideScreen.dart';
 import 'package:ride_now_khoaluan/views/auth/login_view.dart';
 import 'package:ride_now_khoaluan/views/auth/register_view.dart';
+import 'package:ride_now_khoaluan/views/change_password_view.dart';
 import 'package:ride_now_khoaluan/views/main/main_view.dart';
 
 class AppPages {
@@ -15,5 +16,9 @@ class AppPages {
     GetPage(name: AppRoutes.login, page: () => const LoginView()),
     GetPage(name: AppRoutes.register, page: () => const RegisterView()),
     GetPage(name: AppRoutes.main, page: () => const MainView()),
+    GetPage(
+      name: AppRoutes.changePassword,
+      page: () => const ChangePasswordView(),
+    ),
   ];
 }

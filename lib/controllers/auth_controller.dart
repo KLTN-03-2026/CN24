@@ -17,8 +17,14 @@ class AuthController extends GetxController {
   final RxString _error = ''.obs;
   final RxBool _isInitialized = false.obs;
 
-  // Flag ngăn auth state change navigate khi đang xác thực (login/register)
+  // Flag ngăn auth state change navigate khi đang xác thực (login/register/changePassword)
   bool _isAuthenticating = false;
+
+  /// Cho phép các controller khác (vd: ChangePasswordController)
+  /// khoá/mở auth state handler để tránh race condition.
+  void setAuthenticating(bool value) {
+    _isAuthenticating = value;
+  }
 
   User? get user => _user.value;
   UserModel? get userModel => _userModel.value;
@@ -70,8 +76,8 @@ class AuthController extends GetxController {
     SchedulerBinding.instance.addPostFrameCallback((_) {
       // Chỉ redirect sang Main nếu đang ở Splash, Login hoặc Register
       final currentRoute = Get.currentRoute;
-      if (currentRoute == AppRoutes.login || 
-          currentRoute == AppRoutes.register || 
+      if (currentRoute == AppRoutes.login ||
+          currentRoute == AppRoutes.register ||
           currentRoute == AppRoutes.splash ||
           currentRoute == AppRoutes.onboarding) {
         Get.offAllNamed(AppRoutes.main);
@@ -90,14 +96,19 @@ class AuthController extends GetxController {
         password,
       );
       _userModel.value = userModel;
-      
+
       // In ra Role của người dùng vừa đăng nhập
       debugPrint('====================================');
-      debugPrint('[LOGIN SUCCESS] Role của bạn là: ${userModel.role.name.toUpperCase()}');
+      debugPrint(
+        '[LOGIN SUCCESS] Role của bạn là: ${userModel.role.name.toUpperCase()}',
+      );
       debugPrint('====================================');
-      
-      Get.snackbar('Thành công', 'Đăng nhập thành công với quyền ${userModel.role.name}!');
-      
+
+      Get.snackbar(
+        'Thành công',
+        'Đăng nhập thành công với quyền ${userModel.role.name}!',
+      );
+
       // Navigate to main screen
       await Get.offAllNamed(AppRoutes.main);
     } catch (e) {
@@ -155,38 +166,38 @@ class AuthController extends GetxController {
 
   Future<void> updateUserStatus({bool? isOnline, bool? isAvailable}) async {
     if (_userModel.value == null) return;
-    
+
     final updatedModel = _userModel.value!.copyWith(
       isOnline: isOnline ?? _userModel.value!.isOnline,
       isAvailable: isAvailable ?? _userModel.value!.isAvailable,
     );
-    
+
     await _authService.updateUserModel(updatedModel);
     _userModel.value = updatedModel;
   }
 
   Future<void> completeRide(double fare) async {
     if (_userModel.value == null) return;
-    
+
     final updatedModel = _userModel.value!.copyWith(
       earnings: _userModel.value!.earnings + fare,
       totalTrips: _userModel.value!.totalTrips + 1,
     );
-    
+
     await _authService.updateUserModel(updatedModel);
     _userModel.value = updatedModel;
-    debugPrint('[AuthController] Ride completed. New earnings: ${updatedModel.earnings}');
+    debugPrint(
+      '[AuthController] Ride completed. New earnings: ${updatedModel.earnings}',
+    );
   }
 
   Future<void> updateUserPhone(String phone) async {
     if (_userModel.value == null) return;
-    
+
     _isLoading.value = true;
     try {
-      final updatedModel = _userModel.value!.copyWith(
-        phone: phone,
-      );
-      
+      final updatedModel = _userModel.value!.copyWith(phone: phone);
+
       await _authService.updateUserModel(updatedModel);
       _userModel.value = updatedModel;
       Get.snackbar('Thành công', 'Đã cập nhật số điện thoại.');
@@ -201,5 +212,42 @@ class AuthController extends GetxController {
     await _authService.logOut();
     _userModel.value = null;
     Get.offAllNamed(AppRoutes.login);
+  }
+
+  Future<void> signOut() async {
+    try {
+      _isLoading.value = true;
+
+      await _authService.logOut();
+      // KHÔNG Get.offAll ở đây (để authStateChanges xử lý)
+      _userModel.value = null;
+    } catch (e) {
+      _error.value = e.toString();
+      Get.snackbar('Error', 'Failed To Sign Out');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Sign out chuyên dùng sau khi đổi mật khẩu.
+  /// Khoá auth state handler để tránh race condition do updatePassword
+  /// trigger token refresh, rồi navigate tường minh sang Login.
+  Future<void> signOutAfterPasswordChange() async {
+    try {
+      _isAuthenticating = true; // Khoá handler
+      _isLoading.value = true;
+
+      await _authService.logOut();
+      _userModel.value = null;
+
+      // Navigate tường minh, không chờ postFrameCallback
+      Get.offAllNamed(AppRoutes.login);
+    } catch (e) {
+      _error.value = e.toString();
+      Get.snackbar('Error', 'Failed To Sign Out');
+    } finally {
+      _isAuthenticating = false; // Luôn mở lại
+      _isLoading.value = false;
+    }
   }
 }

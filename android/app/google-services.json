@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1072950734327",
+    "project_id": "ridenow-app-3aa76",
+    "storage_bucket": "ridenow-app-3aa76.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072950734327:android:65459955fde88bf50492f2",
+        "android_client_info": {
+          "package_name": "com.example.ride_now_khoaluan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCf-j4D_x5hTXQxmzmukrklKU9D0vul36o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

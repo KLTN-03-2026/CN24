@@ -1,0 +1,337 @@
+# Kế hoạch triển khai: Driver Vehicle Profile Management
+
+## 1. Tổng quan
+
+Thêm chức năng cho **role DRIVER** để quản lý thông tin xe, giấy tờ xe, và thông tin tài xế liên quan. Giao diện tham khảo phong cách **Grab Driver** — gọn, rõ ràng, chia section, có trạng thái duyệt hồ sơ.
+
+### Phân tích codebase hiện tại
+
+| Thành phần | Chi tiết |
+|---|---|
+| **Framework** | Flutter + GetX (state management + routing + DI) |
+| **Backend** | Firebase Firestore (trực tiếp, không có REST API server riêng) |
+| **Auth** | Firebase Auth + `AuthController` (GetX) |
+| **User Model** | `UserModel` với `role: customer/driver`, đã có `vehicleType`, `vehiclePlate` cơ bản |
+| **Storage** | Chưa có Firebase Storage / upload ảnh |
+| **Routing** | `GetX` named routes qua `AppRoutes` + `AppPages` |
+| **Theme** | Chưa có theme system riêng, dùng inline styles |
+| **File pattern** | Controller → Service → FirestoreService → Firestore |
+
+> [!IMPORTANT]
+> Project **KHÔNG có REST API backend riêng** — tất cả đều giao tiếp trực tiếp với Firestore. Do đó, KHÔNG tạo REST API. Thay vào đó, tạo `VehicleProfileService` giao tiếp trực tiếp Firestore (giống `FirestoreService` hiện tại).
+
+> [!IMPORTANT]
+> Project **chưa có Firebase Storage**. Cần thêm dependency `firebase_storage` vào `pubspec.yaml` và tạo `StorageService` để upload ảnh.
+
+---
+
+## 2. Yêu cầu phản hồi từ User
+
+> [!WARNING]
+> **Về Firebase Storage**: Project chưa có Firebase Storage. Để upload ảnh (ảnh xe, ảnh biển số, ảnh giấy tờ), tôi sẽ thêm dependency `firebase_storage` vào `pubspec.yaml`. Bạn cần đảm bảo đã **enable Firebase Storage** trên Firebase Console. Bạn đồng ý không?
+
+> [!IMPORTANT]
+> **Về `image_picker`**: Cần thêm package `image_picker` để chọn ảnh từ camera/gallery. Bạn đồng ý thêm dependency này không?
+
+---
+
+## 3. Cấu trúc dữ liệu Firestore
+
+### Collection mới: `driver_vehicle_profiles`
+
+Mỗi document có `documentId = driverId`:
+
+```dart
+{
+  "driverId": "uid_xxx",
+  "status": "approved" | "pending_review" | "rejected",
+  "rejectionReason": null | "Lý do bị từ chối...",
+  
+  "currentVehicleInfo": {
+    "licensePlate": "51A-123.45",
+    "vehicleType": "Car" | "Bike",
+    "brand": "Toyota",
+    "model": "Vios",
+    "color": "Trắng",
+    "year": 2022,
+    "seatCount": 4,           // null nếu Bike
+    "vehiclePhoto": "url...",
+    "platePhoto": "url...",
+    "registrationNumber": "ĐK-xxx",
+    "registrationExpiry": "2027-01-01",
+    "insuranceNumber": "BH-xxx",
+    "insuranceExpiry": "2027-06-01",
+    "registrationPhoto": "url...",
+    "insurancePhoto": "url..."
+  },
+  
+  "driverInfo": {
+    "fullName": "Nguyễn Văn A",
+    "phoneNumber": "0901234567",
+    "avatar": "url...",
+    "driverLicenseNumber": "GPLX-xxx",
+    "driverLicenseExpiry": "2028-01-01",
+    "driverLicensePhoto": "url...",
+    "nationalId": "079xxxxxxx"
+  },
+  
+  "pendingVehicleUpdate": null | {
+    // Chỉ chứa các field bị thay đổi so với currentVehicleInfo/driverInfo
+    "licensePlate": "51B-999.99",
+    "brand": "Honda",
+    ...
+  },
+  
+  "updatedAt": Timestamp,
+  "createdAt": Timestamp
+}
+```
+
+### Logic nghiệp vụ quan trọng
+
+```mermaid
+flowchart TD
+    A[Driver cập nhật thông tin] --> B{Thông tin nhạy cảm?}
+    B -->|Không| C[Lưu trực tiếp vào currentVehicleInfo/driverInfo]
+    B -->|Có| D[Lưu vào pendingVehicleUpdate]
+    D --> E[status = pending_review]
+    E --> F{Admin duyệt?}
+    F -->|Approve| G[Copy pending → current, clear pending, status = approved]
+    F -->|Reject| H[Giữ current, status = rejected, lưu rejectionReason]
+```
+
+**Thông tin nhạy cảm** (cần pending review):
+- `licensePlate`, `brand`, `model`, `vehicleType`
+- Tất cả ảnh giấy tờ: `vehiclePhoto`, `platePhoto`, `registrationPhoto`, `insurancePhoto`, `driverLicensePhoto`
+- `registrationNumber`, `insuranceNumber`, `driverLicenseNumber`
+
+**Thông tin không nhạy cảm** (lưu trực tiếp):
+- `color`, `year`, `seatCount`, `fullName`, `phoneNumber`, `avatar`
+
+---
+
+## 4. Danh sách file cần thay đổi
+
+### FILE MỚI (14 files)
+
+---
+
+#### Model
+
+##### [NEW] [vehicle_profile_model.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/models/vehicle_profile_model.dart)
+- Class `DriverVehicleProfile` với `fromMap()`, `toMap()`, `copyWith()`
+- Class `VehicleInfo` (thông tin xe + giấy tờ)
+- Class `DriverInfo` (thông tin tài xế liên quan)
+- Enum `ProfileStatus { approved, pending_review, rejected }`
+
+---
+
+#### Service
+
+##### [NEW] [vehicle_profile_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/vehicle_profile_service.dart)
+- `getVehicleProfile(driverId)` — lấy profile từ Firestore
+- `createVehicleProfile(profile)` — tạo mới
+- `updateVehicleProfile(driverId, data, hasSensitiveChanges)` — cập nhật
+- `uploadImage(driverId, imageFile, imageType)` — upload ảnh lên Firebase Storage
+- Logic phân biệt sensitive/non-sensitive fields
+
+##### [NEW] [storage_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/storage_service.dart)
+- Upload file lên Firebase Storage
+- Trả về download URL
+- Xóa file cũ khi upload file mới
+- Path convention: `driver_vehicles/{driverId}/{imageType}_{timestamp}.jpg`
+
+---
+
+#### Controller
+
+##### [NEW] [vehicle_profile_controller.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/controllers/vehicle_profile_controller.dart)
+- GetX controller, dùng `Get.find<AuthController>()` để lấy driverId
+- RxBool `isLoading`, RxString `error`
+- `Rx<DriverVehicleProfile?>` profile
+- `fetchProfile()`, `saveProfile()`, `uploadImage()`
+- Validation logic
+- Xác định sensitive fields khi save
+
+---
+
+#### Views / Widgets (10 files)
+
+##### [NEW] [driver_vehicle_screen.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/driver_vehicle_screen.dart)
+- Màn hình chính, chứa 3 section scrollable
+- AppBar với badge trạng thái
+- Nút "Lưu thay đổi" ở bottom
+- Pending update banner nếu đang chờ duyệt
+
+##### [NEW] [vehicle_status_badge.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/vehicle_status_badge.dart)
+- Badge hiển thị trạng thái: Đã duyệt (xanh), Chờ duyệt (vàng), Bị từ chối (đỏ)
+
+##### [NEW] [driver_info_section.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/driver_info_section.dart)
+- Hiển thị/chỉnh sửa: Họ tên, SĐT, Avatar, GPLX, Ngày hết hạn GPLX, CCCD
+
+##### [NEW] [vehicle_info_section.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/vehicle_info_section.dart)
+- Hiển thị/chỉnh sửa: Biển số, Loại xe, Hãng, Model, Màu, Năm SX, Số chỗ, Ảnh xe, Ảnh biển số
+- Ẩn seatCount khi vehicleType = Bike
+
+##### [NEW] [vehicle_documents_section.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/vehicle_documents_section.dart)
+- Hiển thị/chỉnh sửa: Đăng ký xe, Bảo hiểm, Ảnh giấy tờ
+
+##### [NEW] [image_upload_field.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/image_upload_field.dart)
+- Widget chọn ảnh từ camera/gallery
+- Preview ảnh trước khi upload
+- Loading state khi đang upload
+- Hiển thị ảnh hiện tại nếu có
+
+##### [NEW] [section_header.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/section_header.dart)
+- Header chung cho mỗi section với tiêu đề + nút Edit
+
+##### [NEW] [pending_update_banner.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/vehicle/widgets/pending_update_banner.dart)
+- Banner thông báo "Bạn đang có yêu cầu cập nhật chờ duyệt"
+- Hiển thị rejection reason nếu status = rejected
+
+---
+
+### FILE CHỈNH SỬA (3 files)
+
+---
+
+##### [MODIFY] [profile_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/profiles/profile_view.dart)
+- Thêm mục **"Thông tin xe"** (icon `Icons.directions_car`) vào section ACCOUNT SETTINGS
+- Chỉ hiển thị khi `user.role == UserRole.driver`
+- OnTap navigate tới `DriverVehicleScreen`
+
+##### [MODIFY] [pubspec.yaml](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/pubspec.yaml)
+- Thêm dependencies:
+  - `firebase_storage: ^12.4.4`
+  - `image_picker: ^1.1.2`
+
+##### [MODIFY] [app_routes.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/routes/app_routes.dart)
+- Thêm route: `static const String vehicleProfile = '/vehicle-profile';`
+
+> [!NOTE]
+> Không chỉnh sửa `app_pages.dart` vì sẽ dùng `Get.to()` trực tiếp thay vì named route cho màn hình con này (giống cách `DriverNavigationScreen` đang được navigate).
+
+---
+
+## 5. Thiết kế UI
+
+### Layout tổng quan (phong cách Grab Driver)
+
+```
+┌─────────────────────────────────────────┐
+│  ← Thông tin xe          [Badge status] │  AppBar
+├─────────────────────────────────────────┤
+│  ⚠️ Banner pending/rejected (nếu có)    │
+├─────────────────────────────────────────┤
+│                                         │
+│  📋 THÔNG TIN TÀI XẾ        [Chỉnh sửa]│
+│  ┌─────────────────────────────────────┐│
+│  │ Họ tên:     Nguyễn Văn A           ││
+│  │ SĐT:        0901234567             ││
+│  │ GPLX:       xxx-xxx                ││
+│  │ Hết hạn:    01/01/2028             ││
+│  │ CCCD:       079xxxxxxx             ││
+│  │ [Ảnh đại diện]  [Ảnh GPLX]        ││
+│  └─────────────────────────────────────┘│
+│                                         │
+│  🚗 THÔNG TIN XE            [Chỉnh sửa]│
+│  ┌─────────────────────────────────────┐│
+│  │ Biển số:    51A-123.45  (bắt buộc) ││
+│  │ Loại xe:    Car ▼                   ││
+│  │ Hãng xe:    Toyota                  ││
+│  │ Dòng xe:    Vios                    ││
+│  │ Màu xe:     Trắng                   ││
+│  │ Năm SX:     2022                    ││
+│  │ Số chỗ:     4 (ẩn nếu Bike)        ││
+│  │ [Ảnh xe]        [Ảnh biển số]       ││
+│  └─────────────────────────────────────┘│
+│                                         │
+│  📄 GIẤY TỜ XE              [Chỉnh sửa]│
+│  ┌─────────────────────────────────────┐│
+│  │ Số ĐK xe:   ĐK-xxx                 ││
+│  │ Hết hạn ĐK: 01/01/2027             ││
+│  │ Số BH:      BH-xxx                 ││
+│  │ Hết hạn BH: 01/06/2027             ││
+│  │ [Ảnh ĐK xe]    [Ảnh BH]           ││
+│  └─────────────────────────────────────┘│
+│                                         │
+│  ┌─────────────────────────────────────┐│
+│  │     💾 Lưu thay đổi                ││
+│  └─────────────────────────────────────┘│
+└─────────────────────────────────────────┘
+```
+
+### Color scheme & Style
+
+- Dùng lại color palette từ `profile_view.dart`:
+  - Primary: `#1C64F2`
+  - Background: `#F8FAFC`
+  - Text dark: `#0F172A`
+  - Text soft: `#64748B`
+- Badge status:
+  - Approved: `Colors.green.shade50` + `Colors.green.shade600`
+  - Pending: `Colors.orange.shade50` + `Colors.orange.shade600`
+  - Rejected: `Colors.red.shade50` + `Colors.red.shade600`
+- Card style: `white` background, `borderRadius: 20`, `boxShadow` nhẹ
+- Form input style: giống `profile_view.dart` (filled, rounded)
+
+---
+
+## 6. Validation chi tiết
+
+| Trường | Quy tắc |
+|---|---|
+| `licensePlate` | Bắt buộc, không rỗng |
+| `phoneNumber` | Bắt buộc, regex `^\+?[0-9\s]{9,15}$` |
+| `year` | Bắt buộc, 1900 ≤ year ≤ năm hiện tại + 1 |
+| `seatCount` | Bắt buộc nếu `vehicleType == Car`, ≥ 1 |
+| `registrationExpiry` | Nếu có, phải ≥ ngày hiện tại |
+| `insuranceExpiry` | Nếu có, phải ≥ ngày hiện tại |
+| `driverLicenseExpiry` | Nếu có, phải ≥ ngày hiện tại |
+| Ảnh upload | Kiểm tra null, format `.jpg/.png/.jpeg` |
+
+---
+
+## 7. Thứ tự triển khai
+
+1. **Bước 1**: Cập nhật `pubspec.yaml` (thêm dependencies)
+2. **Bước 2**: Tạo model `vehicle_profile_model.dart`
+3. **Bước 3**: Tạo `storage_service.dart`
+4. **Bước 4**: Tạo `vehicle_profile_service.dart`
+5. **Bước 5**: Tạo `vehicle_profile_controller.dart`
+6. **Bước 6**: Tạo widgets (image_upload_field, section_header, status_badge, pending_banner)
+7. **Bước 7**: Tạo các section (driver_info, vehicle_info, vehicle_documents)
+8. **Bước 8**: Tạo màn hình chính `driver_vehicle_screen.dart`
+9. **Bước 9**: Chỉnh sửa `profile_view.dart` (thêm entry point)
+10. **Bước 10**: Cập nhật `app_routes.dart`
+
+---
+
+## 8. Câu hỏi mở
+
+> [!IMPORTANT]
+> 1. Bạn đã **enable Firebase Storage** trên Firebase Console chưa? Nếu chưa thì cần enable trước khi tính năng upload ảnh hoạt động.
+> 2. Bạn có muốn tôi thêm **Firestore Security Rules** mẫu cho collection `driver_vehicle_profiles` không?
+> 3. Về phần **Admin approve/reject**: Bạn có muốn tôi tạo luôn một màn hình admin đơn giản để duyệt hồ sơ, hay chỉ cần logic backend (Firestore) sẵn sàng và bạn sẽ duyệt thủ công trên Firebase Console?
+
+---
+
+## 9. Kế hoạch xác minh
+
+### Build & Analyze
+- Chạy `flutter analyze` sau khi hoàn thành để đảm bảo không có lỗi
+- Chạy `flutter build apk --debug` để xác minh build thành công
+
+### Kiểm tra thủ công
+- Đăng nhập với tài khoản Driver → mở Profile → thấy mục "Thông tin xe"
+- Mở màn hình thông tin xe → form hiển thị đầy đủ 3 section
+- Nhập dữ liệu → validation hoạt động
+- Upload ảnh → preview hiển thị
+- Lưu thông tin → dữ liệu xuất hiện trên Firestore
+- Chuyển vehicleType sang Bike → seatCount ẩn đi
+- Đăng nhập Customer → Profile → KHÔNG thấy mục "Thông tin xe"
+
+### Đảm bảo không phá vỡ logic cũ
+- Kiểm tra flow đặt xe Customer vẫn hoạt động
+- Kiểm tra flow nhận cuốc Driver vẫn hoạt động
+- Kiểm tra navigation, auth, logout hoạt động bình thường

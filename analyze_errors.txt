@@ -1,0 +1,110 @@
+Analyzing ride_now_khoaluan...                                  
+
+   info - The constant name 'searching_driver' isn't a lowerCamelCase identifier - lib\models\ride_request_model.dart:5:3 - constant_identifier_names
+   info - The constant name 'driver_assigned' isn't a lowerCamelCase identifier - lib\models\ride_request_model.dart:6:3 - constant_identifier_names
+   info - The constant name 'on_the_way' isn't a lowerCamelCase identifier - lib\models\ride_request_model.dart:10:3 - constant_identifier_names
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:50:48 - unnecessary_cast
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:61:52 - unnecessary_cast
+warning - The value of the local variable 'since' isn't used - lib\repositories\ride_repository.dart:67:11 - unused_local_variable
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:80:45 - unnecessary_cast
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:113:64 - unnecessary_cast
+warning - Unnecessary cast - lib\repositories\ride_repository.dart:149:64 - unnecessary_cast
+warning - Unnecessary cast - lib\services\location_service.dart:90:51 - unnecessary_cast
+   info - Don't invoke 'print' in production code - lib\services\matching_service.dart:84:7 - avoid_print
+warning - Unused import: '../models/user_model.dart' - lib\services\ride_service.dart:5:8 - unused_import
+   info - The file name 'OnboardingScreen.dart' isn't a lower_case_with_underscores identifier - lib\views\OnboardingScreen.dart:1:1 - file_names
+   info - Constructors for public widgets should have a named 'key' parameter - lib\views\OnboardingScreen.dart:5:7 - use_key_in_widget_constructors
+   info - Invalid use of a private type in a public API - lib\views\OnboardingScreen.dart:7:3 - library_private_types_in_public_api
+   info - The file name 'SmartRideScreen.dart' isn't a lower_case_with_underscores identifier - lib\views\SmartRideScreen.dart:1:1 - file_names
+   info - Constructors for public widgets should have a named 'key' parameter - lib\views\SmartRideScreen.dart:13:7 - use_key_in_widget_constructors
+   info - Invalid use of a private type in a public API - lib\views\SmartRideScreen.dart:15:3 - library_private_types_in_public_api
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\SmartRideScreen.dart:77:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\SmartRideScreen.dart:235:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\SmartRideScreen.dart:253:35 - deprecated_member_use
+warning - The value of the field '_formKey' isn't used - lib\views\auth\login_view.dart:16:9 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\auth\login_view.dart:89:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\auth\login_view.dart:253:55 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\views\auth\login_view.dart:284:33 - avoid_print
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:216:29 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:217:29 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:233:29 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\auth\register_view.dart:234:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\auth\register_view.dart:330:49 - deprecated_member_use
+   info - The imported package 'google_maps_flutter' isn't a dependency of the importing package - lib\views\driver\driver_navigation_screen.dart:8:8 - depend_on_referenced_packages
+  error - Target of URI doesn't exist: 'package:google_maps_flutter/google_maps_flutter.dart' - lib\views\driver\driver_navigation_screen.dart:8:8 - uri_does_not_exist
+  error - Undefined class 'GoogleMapController' - lib\views\driver\driver_navigation_screen.dart:24:3 - undefined_class
+warning - The value of the field '_locationService' isn't used - lib\views\driver\driver_navigation_screen.dart:25:25 - unused_field
+  error - Undefined class 'LatLng' - lib\views\driver\driver_navigation_screen.dart:27:3 - undefined_class
+  error - The name 'LatLng' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:28:8 - non_type_as_type_argument
+  error - The name 'LatLng' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:34:8 - non_type_as_type_argument
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:63:23 - undefined_method
+  error - Undefined name 'CameraUpdate' - lib\views\driver\driver_navigation_screen.dart:67:11 - undefined_identifier
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:91:26 - undefined_method
+  error - Undefined class 'LatLngBounds' - lib\views\driver\driver_navigation_screen.dart:102:3 - undefined_class
+  error - The name 'LatLng' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:102:43 - non_type_as_type_argument
+  error - The method 'LatLngBounds' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:113:12 - undefined_method
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:114:18 - undefined_method
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:115:18 - undefined_method
+  error - Undefined class 'LatLng' - lib\views\driver\driver_navigation_screen.dart:119:28 - undefined_class
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:120:20 - undefined_method
+  error - The name 'LatLng' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:148:42 - non_type_as_type_argument
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:149:20 - undefined_method
+warning - The value of the local variable 'durationSeconds' isn't used - lib\views\driver\driver_navigation_screen.dart:156:17 - unused_local_variable
+  error - Undefined name 'CameraUpdate' - lib\views\driver\driver_navigation_screen.dart:180:19 - undefined_identifier
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:198:20 - undefined_method
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:202:25 - undefined_method
+  error - The name 'LatLng' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:230:42 - non_type_as_type_argument
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:231:20 - undefined_method
+  error - Undefined name 'CameraUpdate' - lib\views\driver\driver_navigation_screen.dart:260:19 - undefined_identifier
+  error - The name 'Marker' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:277:7 - non_type_as_type_argument
+  error - The name 'Marker' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:278:22 - non_type_as_type_argument
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:279:20 - undefined_method
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:283:25 - undefined_method
+  error - The method 'Marker' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:289:17 - undefined_method
+  error - The name 'MarkerId' isn't a class - lib\views\driver\driver_navigation_screen.dart:290:23 - creation_with_non_type
+  error - Undefined name 'BitmapDescriptor' - lib\views\driver\driver_navigation_screen.dart:292:13 - undefined_identifier
+  error - Undefined name 'BitmapDescriptor' - lib\views\driver\driver_navigation_screen.dart:292:51 - undefined_identifier
+  error - The method 'InfoWindow' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:293:19 - undefined_method
+  error - The method 'Marker' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:298:19 - undefined_method
+  error - The name 'MarkerId' isn't a class - lib\views\driver\driver_navigation_screen.dart:299:25 - creation_with_non_type
+  error - Undefined name 'BitmapDescriptor' - lib\views\driver\driver_navigation_screen.dart:301:15 - undefined_identifier
+  error - Undefined name 'BitmapDescriptor' - lib\views\driver\driver_navigation_screen.dart:301:53 - undefined_identifier
+  error - The name 'InfoWindow' isn't a class - lib\views\driver\driver_navigation_screen.dart:302:27 - creation_with_non_type
+  error - The name 'Polyline' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:310:7 - non_type_as_type_argument
+  error - The name 'Polyline' isn't a type, so it can't be used as a type argument - lib\views\driver\driver_navigation_screen.dart:311:24 - non_type_as_type_argument
+  error - The method 'Polyline' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:315:21 - undefined_method
+  error - The name 'PolylineId' isn't a class - lib\views\driver\driver_navigation_screen.dart:316:27 - creation_with_non_type
+  error - The method 'Polyline' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:325:21 - undefined_method
+  error - The name 'PolylineId' isn't a class - lib\views\driver\driver_navigation_screen.dart:326:27 - creation_with_non_type
+  error - The method 'LatLng' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:338:20 - undefined_method
+  error - The method 'GoogleMap' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:348:20 - undefined_method
+  error - The method 'CameraPosition' isn't defined for the type '_DriverNavigationScreenState' - lib\views\driver\driver_navigation_screen.dart:349:38 - undefined_method
+  error - Undefined class 'GoogleMapController' - lib\views\driver\driver_navigation_screen.dart:353:30 - undefined_class
+  error - Undefined name 'CameraUpdate' - lib\views\driver\driver_navigation_screen.dart:659:39 - undefined_identifier
+  error - Undefined name 'CameraUpdate' - lib\views\driver\driver_navigation_screen.dart:672:39 - undefined_identifier
+  error - Undefined name 'CameraUpdate' - lib\views\driver\driver_navigation_screen.dart:730:21 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\driver\widgets\ride_request_card.dart:45:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\activity_view.dart:68:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:177:45 - deprecated_member_use
+warning - The value of the local variable 'durationSeconds' isn't used - lib\views\main\home\customer_home_view.dart:319:17 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:496:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:505:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:571:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:1369:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\customer_home_view.dart:1383:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\driver_home_view.dart:157:41 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\views\main\home\driver_home_view.dart:190:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\driver_home_view.dart:206:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\home\driver_home_view.dart:426:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\profiles\profile_view.dart:183:43 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\views\main\profiles\profile_view.dart:206:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\views\main\profiles\profile_view.dart:208:27 - curly_braces_in_flow_control_structures
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\profiles\profile_view.dart:266:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\profiles\profile_view.dart:301:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\customer_history_view.dart:86:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\driver_history_view.dart:131:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\driver_history_view.dart:210:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\driver_history_view.dart:222:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\main\trips\trip_detail_view.dart:38:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\widgets\trip_history_card.dart:29:35 - deprecated_member_use
+

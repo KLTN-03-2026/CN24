@@ -1,0 +1,178 @@
+# Refactor Ride Now App - Clean Architecture
+
+Refactor toàn bộ codebase theo hướng clean code: tách logic ra khỏi UI, tạo controller riêng cho từng module, giảm trùng lặp code, giữ nguyên 100% hành vi và giao diện.
+
+## Nguyên tắc refactor
+
+- **An toàn tối đa**: Chỉ di chuyển/tách code, không thay đổi logic
+- **Giữ nguyên tên class/hàm/biến** đang được dùng ở nơi khác
+- **Không đổi API call, state, validation, navigation**
+- Files nhỏ, đơn giản, ít logic → giữ nguyên (notification_view, chatbot, test views, models, splash, onboarding)
+- Tập trung refactor các file lớn nhồi logic: `customer_home_view.dart` (1504 dòng), `driver_home_view.dart` (470 dòng), `driver_navigation_screen.dart` (745 dòng)
+
+## Phân tích vấn đề hiện tại
+
+| File | Dòng | Vấn đề |
+|------|------|--------|
+| `customer_home_view.dart` | 1504 | Nhồi tất cả logic (location tracking, search, routing, booking, fare calculation, driver tracking) vào StatefulWidget |
+| `driver_home_view.dart` | 470 | Logic quản lý online/offline, listen request, accept ride, complete ride đều trong view |
+| `driver_navigation_screen.dart` | 745 | Logic fetch route, location tracking nằm trong view |
+| `ride_service.dart` + `ride_repository.dart` | | Trùng lặp: `calculateDistance` (Haversine), `completeRide`, `updateRideStatus` xuất hiện ở cả 2 nơi |
+| `_formatVND` | | Hàm định dạng tiền VND trùng lặp ở 3 file (customer_home, driver_home, ride_request_card) |
+
+## Proposed Changes
+
+### Utility / Helpers (Giảm trùng lặp)
+
+#### [NEW] [format_helper.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/helpers/format_helper.dart)
+- Tách hàm `formatVND()` dùng chung (hiện trùng lặp ở 3 file)
+- Tách hàm `parseDistance()` dùng chung
+- Tách hàm `calculateFare()` dùng chung
+
+#### [NEW] [distance_helper.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/helpers/distance_helper.dart)
+- Tách `calculateDistance` (Haversine) đang trùng ở `ride_service.dart` và `matching_service.dart`
+
+---
+
+### Route Service (Tách logic routing trùng lặp)
+
+#### [NEW] [route_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/route_service.dart)
+- Tách logic gọi OSRM API (hiện trùng ở `customer_home_view.dart` và `driver_navigation_screen.dart`)
+- Trả về `RouteInfo` object (points, distance, duration)
+
+---
+
+### Customer Home Controller (File lớn nhất - 1504 dòng)
+
+#### [NEW] [customer_home_controller.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/controllers/customer_home_controller.dart)
+Tách toàn bộ logic từ `_CustomerHomeViewState` ra GetxController:
+- **Location tracking**: `startLocationTracking()`, `updatePickupAddress()`
+- **Search**: `onSearchChanged()`, `searchLocation()`, `selectLocation()`
+- **Routing**: `fetchRouteInfo()`, `getRoute()`, `swapLocations()`, `clearRoute()`
+- **Booking**: `handleBookRide()`, `handleCancelRide()`
+- **Driver tracking**: `startTrackingDriver()`, `stopTrackingDriver()`, `listenToRideRequest()`
+- **State**: tất cả Rx observables (currentLocation, searchedLocation, routePoints, activeRide, etc.)
+
+#### [MODIFY] [customer_home_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/home/customer_home_view.dart)
+- Chuyển từ StatefulWidget → StatelessWidget + GetView<CustomerHomeController>
+- Giữ nguyên `MapController`, `TextEditingController` trong view (vì chúng là UI controllers)
+- Xóa tất cả logic, chỉ giữ build UI
+- Sử dụng `Obx()` để reactive
+- Giữ nguyên 100% giao diện, widget tree, styling
+
+---
+
+### Driver Home Controller
+
+#### [NEW] [driver_home_controller.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/controllers/driver_home_controller.dart)
+Tách logic từ `_DriverHomeScreenState`:
+- **Online/Offline toggle**: `toggleOnlineStatus()`
+- **Driver services**: `startDriverServices()`, `stopDriverServices()`
+- **Request handling**: `acceptRide()`, `declineRide()`, `completeRide()`
+- **Active ride tracking**: `startWatchingActiveRide()`
+- **State**: isOnline, currentRequest, activeRide
+
+#### [MODIFY] [driver_home_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/home/driver_home_view.dart)
+- Chuyển sang dùng `DriverHomeController` via GetX
+- Giữ nguyên UI, chỉ thay state access bằng controller
+
+---
+
+### Driver Navigation Controller
+
+#### [NEW] [driver_navigation_controller.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/controllers/driver_navigation_controller.dart)
+Tách logic từ `_DriverNavigationScreenState`:
+- **Location init**: `initLocation()`
+- **Route fetching**: sử dụng `RouteService` thay vì inline HTTP calls
+- **State**: driverLocation, routePoints, distance, duration, customerRoute state
+
+#### [MODIFY] [driver_navigation_screen.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/driver/driver_navigation_screen.dart)
+- Chuyển sang dùng controller
+- Giữ nguyên UI
+
+---
+
+### Cleanup ride_service.dart
+
+#### [MODIFY] [ride_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/ride_service.dart)
+- Xóa `calculateDistance` (chuyển sang `distance_helper.dart`)
+- Giữ nguyên các method khác
+
+#### [MODIFY] [matching_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/matching_service.dart)
+- Import `calculateDistance` từ `distance_helper.dart` thay vì define inline
+
+---
+
+### Cleanup main.dart
+
+#### [MODIFY] [main.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/main.dart)
+- Xóa code comment cũ (dòng 32-116)
+- Giữ nguyên logic khởi tạo
+
+---
+
+### Các file KHÔNG refactor (giữ nguyên 100%)
+
+| File | Lý do |
+|------|-------|
+| `auth_controller.dart` | Đã clean, logic rõ ràng |
+| `auth_service.dart` | Đã có cấu trúc service tốt |
+| `firestore_service.dart` | Đã tách riêng, logic đơn giản |
+| `location_service.dart` | Đã tách riêng, logic đơn giản |
+| `trackasia_service.dart` | Đã tách riêng, logic đơn giản |
+| `ride_repository.dart` | Đã có cấu trúc repository tốt |
+| Tất cả models | Data class, không có logic cần tách |
+| `login_view.dart` | UI + dùng AuthController, đã clean |
+| `register_view.dart` | UI + dùng AuthController, đã clean |
+| `profile_view.dart` | Logic ít, dùng AuthController, giữ nguyên |
+| `main_view.dart` | Logic rất ít, đã clean |
+| `notification_view.dart` | Placeholder, 22 dòng |
+| `activity_view.dart` | Stateless, logic ít |
+| `trip_detail_view.dart` | Stateless, chỉ hiển thị data |
+| `customer_history_view.dart` | Logic ít, chủ yếu là filter UI |
+| `driver_history_view.dart` | Logic ít, chủ yếu là filter UI |
+| `ride_request_card.dart` | Widget thuần UI (sẽ chỉ thay `_formatCurrency` bằng helper) |
+| `trip_history_card.dart` | Widget thuần UI |
+| `chat_bot_view.dart` | Standalone, không liên quan |
+| `trackasia_test_view.dart` | Test view, không liên quan |
+| `OnboardingScreen.dart` | UI đơn giản |
+| `SmartRideScreen.dart` | Splash screen, animation only |
+| `app_routes.dart` | Config, 13 dòng |
+| `app_pages.dart` | Config, 20 dòng |
+| `request_dialog.dart` | Widget nhỏ, 59 dòng |
+
+## Tóm tắt thay đổi
+
+```
+Tạo mới (6 files):
+├── lib/helpers/format_helper.dart          (formatVND, parseDistance, calculateFare)
+├── lib/helpers/distance_helper.dart        (calculateDistance - Haversine)  
+├── lib/services/route_service.dart         (OSRM API routing)
+├── lib/controllers/customer_home_controller.dart
+├── lib/controllers/driver_home_controller.dart
+└── lib/controllers/driver_navigation_controller.dart
+
+Chỉnh sửa (5 files):
+├── lib/views/main/home/customer_home_view.dart    (tách logic → controller)
+├── lib/views/main/home/driver_home_view.dart      (tách logic → controller)
+├── lib/views/driver/driver_navigation_screen.dart (tách logic → controller)
+├── lib/services/ride_service.dart                 (xóa Haversine trùng)
+├── lib/services/matching_service.dart             (dùng helper thay inline)
+├── lib/views/driver/widgets/ride_request_card.dart(dùng formatVND helper)
+└── lib/main.dart                                  (xóa code comment cũ)
+
+Giữ nguyên: ~25 files
+```
+
+## Verification Plan
+
+### Automated Tests
+```bash
+# Kiểm tra code compile thành công, không có lỗi
+flutter analyze
+```
+
+### Manual Verification
+- Kiểm tra `flutter analyze` không có error mới
+- Tất cả import paths phải chính xác
+- Tất cả class/method references phải đúng
