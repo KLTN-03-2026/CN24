@@ -309,3 +309,20 @@ export function onAllDrivers(callback, maxResults = 200) {
     console.error('Realtime all drivers error:', error);
   });
 }
+
+/**
+ * Realtime listener cho tất cả khách hàng
+ */
+export function onAllCustomers(callback, maxResults = 200) {
+  const q = query(
+    collection(db, 'users'),
+    where('role', '==', 'customer'),
+    limit(maxResults)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(customers);
+  }, (error) => {
+    console.error('Realtime all customers error:', error);
+  });
+}
