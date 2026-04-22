@@ -8,6 +8,7 @@ enum RideStatus {
   rejected,
   timeout,
   on_the_way,
+  ongoing,
   completed,
   cancelled
 }

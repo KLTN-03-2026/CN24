@@ -240,8 +240,11 @@ class AuthService {
 
       return userModel;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') throw 'Email không tồn tại.';
-      if (e.code == 'wrong-password') throw 'Mật khẩu không chính xác.';
+      if (e.code == 'user-not-found' || 
+          e.code == 'wrong-password' || 
+          e.code == 'invalid-credential') {
+        throw 'Sai email hoặc mật khẩu.';
+      }
       if (e.code == 'invalid-email') throw 'Email không hợp lệ.';
       throw e.message ?? 'Đăng nhập thất bại.';
     }

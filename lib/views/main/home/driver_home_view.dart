@@ -33,11 +33,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Khởi tạo trạng thái ban đầu từ userModel
-    _isOnline = _authController.userModel?.isOnline ?? false;
-    if (_isOnline) {
-      _startDriverServices();
-    }
+    // Luôn lắng nghe active ride nếu đã có driverId (phục vụ việc khôi phục chuyến khi restart app)
+    // Bất kể đang Online hay Offline.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final driverId = _authController.userModel?.id;
+      if (driverId != null) {
+        _startWatchingActiveRide(driverId);
+      }
+
+      // Khởi tạo các dịch vụ khác nếu đang Online
+      if (_authController.userModel?.isOnline ?? false) {
+        _startDriverServices();
+      }
+    });
   }
 
   @override
@@ -54,6 +62,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _locationService.startDriverLocationUpdates(driverId);
 
     // 2. Lắng nghe request mới (chỉ những request được assign cho driver này)
+    _requestSubscription?.cancel();
     _requestSubscription = _rideRepository
         .watchIncomingRequests(driverId)
         .listen((requests) {
@@ -95,19 +104,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final driverId = _authController.userModel?.id;
     if (driverId == null) return;
 
-    setState(() => _isOnline = val);
-
     try {
-      // Cập nhật lên Firestore thông qua AuthController hoặc trực tiếp
+      // Cập nhật lên Firestore thông qua AuthController
       await _authController.updateUserStatus(isOnline: val, isAvailable: val);
 
       if (val) {
         _startDriverServices();
       } else {
-        _stopDriverServices();
+        // Khi offline thì dừng cập nhật vị trí và lắng nghe request mới, 
+        // NHƯNG vẫn giữ _activeRideSubscription để theo dõi chuyến đang đi.
+        _locationService.stopDriverLocationUpdates();
+        _requestSubscription?.cancel();
       }
     } catch (e) {
-      setState(() => _isOnline = !val);
       Get.snackbar('Lỗi', 'Không thể cập nhật trạng thái: $e');
     }
   }
@@ -146,52 +155,55 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         child: Column(
           children: [
             // Status Toggle Card
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: _isOnline ? Colors.green : Colors.grey,
-                          shape: BoxShape.circle,
+            Obx(() {
+              final isOnline = _authController.userModel?.isOnline ?? false;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: isOnline ? Colors.green : Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isOnline ? 'Online' : 'Offline',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF374151),
+                        const SizedBox(width: 8),
+                        Text(
+                          isOnline ? 'Online' : 'Offline',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF374151),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Switch(
-                    value: _isOnline,
-                    onChanged: _toggleOnlineStatus,
-                    activeColor: Colors.white,
-                    activeTrackColor: Colors.green,
-                  ),
-                ],
-              ),
-            ),
+                      ],
+                    ),
+                    Switch(
+                      value: isOnline,
+                      onChanged: _toggleOnlineStatus,
+                      activeColor: Colors.white,
+                      activeTrackColor: Colors.green,
+                    ),
+                  ],
+                ),
+              );
+            }),
             const SizedBox(height: 16),
 
             // Map Placeholder

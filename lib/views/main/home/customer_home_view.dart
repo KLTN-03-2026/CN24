@@ -70,6 +70,11 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
   void initState() {
     super.initState();
     _startLocationTracking();
+
+    // Khôi phục chuyến xe đang thực hiện khi vào app
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startWatchingActiveRide();
+    });
   }
 
   @override
@@ -171,6 +176,36 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
 
         if (distance > 10 || _pickupAddress == 'Vị trí hiện tại') {
           _updatePickupAddress(newLocation);
+        }
+      }
+    });
+  }
+
+  void _startWatchingActiveRide() {
+    final customerId = _authController.userModel?.id;
+    if (customerId == null) return;
+
+    _rideRequestSubscription?.cancel();
+    _rideRequestSubscription = _rideRepository
+        .watchActiveRideForCustomer(customerId)
+        .listen((request) {
+      if (mounted) {
+        setState(() {
+          _activeRide = request;
+        });
+      }
+
+      if (request != null) {
+        // Nếu có tài xế nhận chuyến, bắt đầu theo dõi vị trí tài xế
+        if (request.driverId != null && request.driverId!.isNotEmpty) {
+          _startTrackingDriver(request.driverId!);
+        }
+
+        // Tự động đóng các dialog chờ nếu chuyến đã được nhận hoặc đang đi
+        if (request.status == RideStatus.accepted ||
+            request.status == RideStatus.on_the_way ||
+            request.status == RideStatus.ongoing) {
+          if (Get.isDialogOpen == true) Get.back();
         }
       }
     });
@@ -1118,7 +1153,8 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
                         ),
                         if (_activeRide != null &&
                             (_activeRide!.status == RideStatus.accepted ||
-                                _activeRide!.status == RideStatus.on_the_way))
+                                _activeRide!.status == RideStatus.on_the_way ||
+                                _activeRide!.status == RideStatus.ongoing))
                           _buildActiveRidePanel()
                         else if (_routePoints.isNotEmpty)
                           _buildRouteInfoPanel()
@@ -1353,9 +1389,10 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _activeRide!.status == RideStatus.accepted
-                          ? 'Tài xế đang đến'
-                          : 'Đang trong chuyến đi',
+                      (_activeRide!.status == RideStatus.on_the_way || 
+                       _activeRide!.status == RideStatus.ongoing)
+                          ? 'Đang trong chuyến đi'
+                          : 'Tài xế đang đến',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Colors.green,

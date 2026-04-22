@@ -113,7 +113,7 @@ class AuthController extends GetxController {
       await Get.offAllNamed(AppRoutes.main);
     } catch (e) {
       _error.value = e.toString();
-      Get.snackbar('Error', 'Failed To Login: ${e.toString()}');
+      Get.snackbar('Đăng nhập thất bại', 'Sai email hoặc mật khẩu.');
     } finally {
       _isAuthenticating = false;
       _isLoading.value = false;

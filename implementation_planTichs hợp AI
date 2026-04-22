@@ -1,0 +1,350 @@
+# Tích hợp AI vào ứng dụng Ride Now
+
+## Bối cảnh
+
+Dự án Ride Now hiện tại là ứng dụng đặt xe Flutter sử dụng Firebase (Auth, Firestore, Storage), GetX state management, TrackAsia Maps, và OSRM routing. Mục tiêu là tích hợp AI để nâng cao trải nghiệm người dùng theo 7 tính năng được đề xuất trong bảng yêu cầu.
+
+## Kiến trúc AI đề xuất
+
+```mermaid
+graph TB
+    subgraph "Flutter App"
+        A["AI Service Layer"]
+        B["Gemini API Client"]
+        C["Local ML Utils"]
+    end
+    
+    subgraph "Google Cloud"
+        D["Gemini 2.0 Flash API"]
+        E["Firebase Cloud Functions"]
+        F["Firestore - AI Data"]
+    end
+    
+    A --> B
+    A --> C
+    B --> D
+    E --> D
+    E --> F
+    A --> F
+```
+
+**Lựa chọn AI Backend: Google Gemini API**
+- **Lý do**: Miễn phí (free tier 15 RPM), tích hợp tốt với Firebase, hỗ trợ tiếng Việt, đa năng (chatbot, phân tích, gợi ý)
+- **Package**: `google_generative_ai` (official Dart SDK)
+- **Model**: `gemini-2.0-flash` (nhanh, miễn phí, đủ mạnh cho các tác vụ)
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Chọn API Key approach**: Có 2 cách quản lý Gemini API Key:
+> 1. **Embed trong app** (đơn giản, phù hợp luận văn) — dùng `--dart-define`
+> 2. **Qua Firebase Cloud Functions** (bảo mật hơn, phức tạp hơn) — key chỉ nằm trên server
+>
+> **Đề xuất**: Dùng cách 1 cho phạm vi khóa luận, tương tự cách đang dùng `TRACKASIA_KEY`.
+
+> [!WARNING]
+> **Phạm vi thực hiện**: 7 tính năng AI là rất nhiều. Đề xuất chia thành **3 phases** ưu tiên. Bạn muốn làm tất cả cùng lúc hay từng phase?
+
+---
+
+## Proposed Changes — Phase 1: Core AI Infrastructure + Chatbot + Smart Matching
+
+### 1. AI Service Infrastructure
+
+#### [NEW] [ai_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/ai_service.dart)
+
+Service trung tâm quản lý tất cả tương tác với Gemini API:
+
+```dart
+class AIService {
+  late final GenerativeModel _model;
+  late final ChatSession _chatSession;
+  
+  // Singleton pattern
+  static final AIService _instance = AIService._internal();
+  factory AIService() => _instance;
+  
+  // Core methods:
+  Future<String> chat(String message, {String? systemPrompt});
+  Future<Map<String, dynamic>> analyzeRideData(List<TripModel> trips);
+  Future<List<String>> suggestRoutes(LatLng origin, LatLng destination);
+  Future<double> predictETA(LatLng origin, LatLng destination, DateTime time);
+  Future<Map<String, dynamic>> detectAnomaly(RideRequestModel request);
+  Future<List<String>> getPersonalizedSuggestions(String userId);
+}
+```
+
+#### [MODIFY] [pubspec.yaml](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/pubspec.yaml)
+
+Thêm dependencies:
+```yaml
+dependencies:
+  google_generative_ai: ^0.4.6    # Gemini API SDK
+  shared_preferences: ^2.3.3      # Cache AI responses & user preferences
+  fl_chart: ^0.69.2               # Charts cho Admin analytics
+```
+
+---
+
+### 2. Chatbot hỗ trợ (Nâng cấp từ rule-based → AI)
+
+Chatbot hiện tại chỉ dùng `if-else` đơn giản. Nâng cấp thành AI chatbot thực sự.
+
+#### [NEW] [chatbot_controller.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/controllers/chatbot_controller.dart)
+
+```dart
+class ChatbotController extends GetxController {
+  final AIService _aiService = AIService();
+  final messages = <ChatMessage>[].obs;
+  final isTyping = false.obs;
+  
+  // System prompt chứa context về app Ride Now
+  static const _systemPrompt = '''
+  Bạn là RideNow Assistant, trợ lý AI cho ứng dụng đặt xe Ride Now.
+  Hỗ trợ: đặt xe, tra cứu giá, hướng dẫn sử dụng, xử lý vấn đề.
+  Trả lời ngắn gọn, thân thiện, bằng tiếng Việt.
+  ''';
+  
+  Future<void> sendMessage(String text);
+  void _addQuickReplies();  // Gợi ý nhanh
+}
+```
+
+#### [MODIFY] [chat_bot_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/chatbot/chat_bot_view.dart)
+
+Redesign hoàn toàn:
+- Xóa `main()` function (đang có riêng, không đúng)
+- Chuyển sang dùng `ChatbotController` (GetX)
+- UI mới: message bubbles đẹp, typing indicator, quick reply chips
+- Tích hợp trực tiếp vào navigation chính (FAB hoặc bottom sheet)
+- Hỗ trợ các hành động nhanh: "Đặt xe", "Xem lịch sử", "Liên hệ tài xế"
+
+#### [NEW] [chat_message_model.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/models/chat_message_model.dart)
+
+```dart
+class ChatMessage {
+  final String id;
+  final String text;
+  final bool isUser;
+  final DateTime timestamp;
+  final MessageType type;  // text, quickReply, action, loading
+  final Map<String, dynamic>? actionData;
+}
+```
+
+---
+
+### 3. Tối ưu ghép Driver (Smart Matching with AI Scoring)
+
+Nâng cấp `MatchingService` hiện tại từ chỉ sort theo khoảng cách → AI scoring đa yếu tố.
+
+#### [NEW] [smart_matching_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/smart_matching_service.dart)
+
+```dart
+class SmartMatchingService {
+  // Tính điểm AI cho mỗi tài xế dựa trên:
+  // 1. Khoảng cách (40%) - giữ từ MatchingService cũ
+  // 2. Rating (20%) - từ user model
+  // 3. Tỷ lệ nhận cuốc (20%) - tính từ lịch sử
+  // 4. Thời gian phản hồi trung bình (10%)
+  // 5. Lịch sử hoạt động khu vực (10%)
+  
+  double calculateDriverScore(DriverCandidate candidate);
+  Future<List<DriverCandidate>> rankDrivers(RideRequestModel request);
+}
+```
+
+#### [MODIFY] [matching_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/matching_service.dart)
+
+- Tích hợp `SmartMatchingService` vào `findAndMatchDriver()`
+- Thay `driversWithDistance.sort()` bằng AI scoring
+- Thêm logging về lý do chọn tài xế
+
+#### [NEW] [driver_stats_model.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/models/driver_stats_model.dart)
+
+Model lưu thống kê tài xế cho AI scoring:
+```dart
+class DriverStatsModel {
+  final String driverId;
+  final double acceptanceRate;
+  final double avgResponseTime;
+  final int totalTripsCompleted;
+  final double avgRating;
+  final Map<String, int> activeZones; // zone_id -> trip_count
+}
+```
+
+---
+
+## Proposed Changes — Phase 2: ETA Prediction + Route Suggestions + Personalization
+
+### 4. Dự đoán ETA (AI-Enhanced)
+
+#### [NEW] [eta_prediction_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/eta_prediction_service.dart)
+
+```dart
+class ETAPredictionService {
+  // Kết hợp OSRM distance + Gemini AI để dự đoán ETA chính xác hơn
+  // Yếu tố xem xét:
+  // - Khoảng cách thực tế (từ OSRM)
+  // - Thời điểm trong ngày (giờ cao điểm?)
+  // - Ngày trong tuần (cuối tuần vs ngày thường)
+  // - Lịch sử chuyến đi tương tự
+  
+  Future<ETAPrediction> predictETA({
+    required LatLng pickup,
+    required LatLng destination,
+    required DateTime requestTime,
+  });
+}
+```
+
+#### [MODIFY] [customer_home_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/home/customer_home_view.dart)
+
+- Hiển thị ETA dự đoán bên cạnh khoảng cách và giá
+- Thêm AI confidence indicator
+
+---
+
+### 5. Gợi ý tuyến đường thông minh
+
+#### [NEW] [route_suggestion_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/route_suggestion_service.dart)
+
+```dart
+class RouteSuggestionService {
+  // Sử dụng Gemini để phân tích và gợi ý route tối ưu
+  // Gợi ý dựa trên:
+  // - Multiple routes từ OSRM alternatives
+  // - AI đánh giá route nào tốt nhất theo thời điểm
+  // - Label: "Nhanh nhất", "Ngắn nhất", "Ít kẹt xe nhất"
+  
+  Future<List<RouteSuggestion>> suggestRoutes(LatLng origin, LatLng dest);
+}
+```
+
+---
+
+### 6. Cá nhân hóa trải nghiệm
+
+#### [NEW] [personalization_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/personalization_service.dart)
+
+```dart
+class PersonalizationService {
+  // Dùng Gemini phân tích lịch sử chuyến đi để gợi ý:
+  // - Địa chỉ thường xuyên (nhà, công ty)
+  // - Hành trình gần đây
+  // - Thói quen di chuyển (giờ đi làm, cuối tuần)
+  
+  Future<List<PlaceSuggestion>> getFrequentPlaces(String userId);
+  Future<List<TripSuggestion>> getSmartSuggestions(String userId, DateTime now);
+}
+```
+
+#### [MODIFY] [customer_home_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/main/home/customer_home_view.dart)
+
+- Thêm section "Gợi ý cho bạn" với các địa chỉ thường xuyên
+- Quick-book chips: "Về nhà", "Đi làm"
+
+---
+
+## Proposed Changes — Phase 3: Anomaly Detection + Admin Analytics
+
+### 7. Phát hiện bất thường
+
+#### [NEW] [anomaly_detection_service.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/services/anomaly_detection_service.dart)
+
+```dart
+class AnomalyDetectionService {
+  // Dùng Gemini phân tích patterns bất thường:
+  // - Spam đặt chuyến (nhiều request liên tục rồi hủy)
+  // - Gian lận vị trí (GPS spoofing - tọa độ nhảy bất thường)
+  // - Hủy chuyến bất thường
+  // - Hành vi đáng ngờ
+  
+  Future<AnomalyReport> analyzeRequest(RideRequestModel request);
+  Future<AnomalyReport> analyzeUserBehavior(String userId);
+}
+```
+
+#### [MODIFY] [ride_repository.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/repositories/ride_repository.dart)
+
+- Thêm method lấy lịch sử hủy chuyến cho anomaly detection
+
+---
+
+### 8. Phân tích cho Admin (AI Dashboard)
+
+#### [NEW] [admin_analytics_view.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/views/admin/admin_analytics_view.dart)
+
+Dashboard AI cho Admin gồm:
+- **Biểu đồ nhu cầu**: Chart dự báo số chuyến xe theo giờ/ngày
+- **Bản đồ nhiệt**: Khu vực đông khách (heatmap)
+- **AI Insights**: Gemini phân tích data và đưa ra nhận xét/gợi ý chiến lược
+- **Thống kê tài xế**: Top performers, tài xế cần cải thiện
+
+#### [NEW] [admin_analytics_controller.dart](file:///e:/hoc_lap_trinh/laptrinhungdungdidong/ride_now_khoaluan/lib/controllers/admin_analytics_controller.dart)
+
+```dart
+class AdminAnalyticsController extends GetxController {
+  final trips = <TripModel>[].obs;
+  final aiInsights = ''.obs;
+  final demandForecast = <Map<String, dynamic>>[].obs;
+  
+  Future<void> loadAnalytics();
+  Future<void> generateAIInsights();
+  Future<void> forecastDemand();
+}
+```
+
+---
+
+## Tổng kết Files
+
+### Files mới (10 files):
+
+| # | File | Mô tả |
+|---|------|--------|
+| 1 | `lib/services/ai_service.dart` | Core AI service (Gemini client) |
+| 2 | `lib/controllers/chatbot_controller.dart` | Chatbot state management |
+| 3 | `lib/models/chat_message_model.dart` | Chat message model |
+| 4 | `lib/services/smart_matching_service.dart` | AI driver scoring |
+| 5 | `lib/models/driver_stats_model.dart` | Driver statistics model |
+| 6 | `lib/services/eta_prediction_service.dart` | ETA prediction |
+| 7 | `lib/services/route_suggestion_service.dart` | Route suggestions |
+| 8 | `lib/services/personalization_service.dart` | User personalization |
+| 9 | `lib/services/anomaly_detection_service.dart` | Anomaly detection |
+| 10 | `lib/views/admin/admin_analytics_view.dart` + controller | Admin dashboard |
+
+### Files sửa đổi (5 files):
+
+| # | File | Thay đổi |
+|---|------|----------|
+| 1 | `pubspec.yaml` | Thêm AI dependencies |
+| 2 | `chat_bot_view.dart` | Redesign hoàn toàn với AI |
+| 3 | `matching_service.dart` | Tích hợp smart scoring |
+| 4 | `customer_home_view.dart` | ETA, gợi ý, cá nhân hóa |
+| 5 | `ride_repository.dart` | Thêm queries cho AI |
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Bạn muốn làm theo thứ tự phase nào?** Đề xuất bắt đầu Phase 1 (Chatbot + Smart Matching) vì có tác động lớn nhất và dễ demo.
+> 2. **Bạn đã có Google Gemini API Key chưa?** Nếu chưa, cần tạo tại [Google AI Studio](https://aistudio.google.com/apikey) — hoàn toàn miễn phí.
+> 3. **Có cần Admin role riêng không?** Hiện tại `UserRole` chỉ có `customer` và `driver`. Cần thêm `admin` để truy cập dashboard phân tích?
+
+## Verification Plan
+
+### Automated Tests
+- Unit test cho `AIService` — mock Gemini responses
+- Unit test cho `SmartMatchingService` scoring algorithm
+- Integration test cho chatbot flow
+
+### Manual Verification
+- Demo chatbot: hỏi đáp về app, giá cước, hướng dẫn sử dụng
+- Demo smart matching: so sánh kết quả matching cũ vs mới
+- Demo ETA: so sánh ETA dự đoán vs thực tế
+- Demo admin dashboard: xem charts và AI insights

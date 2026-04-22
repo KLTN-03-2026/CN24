@@ -110,28 +110,104 @@ class RideRepository {
 
   // Stream chuyến xe đang thực hiện (chỉ trong vòng 24h gần nhất)
   Stream<RideRequestModel?> watchActiveRide(String driverId) {
-    final since = Timestamp.fromDate(
-      DateTime.now().subtract(const Duration(hours: 24)),
-    );
+    // Chúng ta lắng nghe đồng thời cả ride_requests (cho các chuyến mới accept)
+    // và trips (cho các chuyến đang thực hiện - ongoing)
     return _firestore
         .collection('ride_requests')
         .where('driverId', isEqualTo: driverId)
-        .where(
-          'status',
-          whereIn: [RideStatus.accepted.name, RideStatus.on_the_way.name],
-        )
         .snapshots()
-        .map((snapshot) {
-          if (snapshot.docs.isNotEmpty) {
-            return RideRequestModel.fromMap(
-              snapshot.docs.first.data() as Map<String, dynamic>,
-            );
+        .asyncMap((snapshot) async {
+          // 1. Tìm các request có trạng thái hoạt động
+          final activeDocs = snapshot.docs.where((doc) {
+            final status = (doc.data()['status'] as String?)?.toLowerCase() ?? '';
+            return status == RideStatus.accepted.name || 
+                   status == RideStatus.on_the_way.name || 
+                   status == RideStatus.ongoing.name;
+          }).toList();
+
+          if (activeDocs.isNotEmpty) {
+            // Sắp xếp lấy chuyến mới nhất
+            activeDocs.sort((a, b) {
+              final aTime = a.get('createdAt') as Timestamp?;
+              final bTime = b.get('createdAt') as Timestamp?;
+              if (aTime == null || bTime == null) return 0;
+              return bTime.compareTo(aTime);
+            });
+            return RideRequestModel.fromMap(activeDocs.first.data() as Map<String, dynamic>);
           }
+
+          // 2. Nếu không thấy trong ride_requests, hãy kiểm tra collection 'trips' (phòng trường hợp đồng bộ chậm)
+          final tripSnapshot = await _firestore
+              .collection('trips')
+              .where('driverId', isEqualTo: driverId)
+              .where('status', isEqualTo: 'ongoing')
+              .limit(1)
+              .get();
+
+          if (tripSnapshot.docs.isNotEmpty) {
+            final tripId = tripSnapshot.docs.first.id;
+            final requestDoc = await _firestore.collection('ride_requests').doc(tripId).get();
+            if (requestDoc.exists) {
+              return RideRequestModel.fromMap(requestDoc.data() as Map<String, dynamic>);
+            }
+          }
+
           return null;
         });
   }
 
-  // Tạo trip ongoing ngay khi driver accept chuyến
+  // Stream chuyến xe đang thực hiện (Dành cho Customer)
+  Stream<RideRequestModel?> watchActiveRideForCustomer(String customerId) {
+    return _firestore
+        .collection('ride_requests')
+        .where('customerId', isEqualTo: customerId)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      // 1. Tìm các request có trạng thái hoạt động
+      final activeDocs = snapshot.docs.where((doc) {
+        final status = (doc.data()['status'] as String?)?.toLowerCase() ?? '';
+        return status == RideStatus.accepted.name ||
+            status == RideStatus.on_the_way.name ||
+            status == RideStatus.ongoing.name ||
+            status == RideStatus.pending.name ||
+            status == RideStatus.searching_driver.name ||
+            status == RideStatus.driver_assigned.name;
+      }).toList();
+
+      if (activeDocs.isNotEmpty) {
+        // Sắp xếp lấy chuyến mới nhất
+        activeDocs.sort((a, b) {
+          final aTime = a.get('createdAt') as Timestamp?;
+          final bTime = b.get('createdAt') as Timestamp?;
+          if (aTime == null || bTime == null) return 0;
+          return bTime.compareTo(aTime);
+        });
+        return RideRequestModel.fromMap(
+            activeDocs.first.data() as Map<String, dynamic>);
+      }
+
+      // 2. Nếu không thấy trong ride_requests, hãy kiểm tra collection 'trips'
+      final tripSnapshot = await _firestore
+          .collection('trips')
+          .where('customerId', isEqualTo: customerId)
+          .where('status', isEqualTo: 'ongoing')
+          .limit(1)
+          .get();
+
+      if (tripSnapshot.docs.isNotEmpty) {
+        final tripId = tripSnapshot.docs.first.id;
+        final requestDoc =
+            await _firestore.collection('ride_requests').doc(tripId).get();
+        if (requestDoc.exists) {
+          return RideRequestModel.fromMap(
+              requestDoc.data() as Map<String, dynamic>);
+        }
+      }
+
+      return null;
+    });
+  }
+
   Future<void> createOngoingTrip(TripModel trip) async {
     await _firestore.collection('trips').doc(trip.id).set(trip.toMap());
   }

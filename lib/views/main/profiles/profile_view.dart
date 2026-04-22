@@ -18,6 +18,7 @@ class _ProfileViewState extends State<ProfileView> {
 
   String? _phoneError;
   bool _isEditingPhone = false;
+  bool _isSavingPhone = false;
 
   static const _primary = Color(0xFF1C64F2); // Vibrant blue matching image
   static const _bg = Color(0xFFF8FAFC);
@@ -52,9 +53,14 @@ class _ProfileViewState extends State<ProfileView> {
     setState(() {
       _phoneError = null;
       _isEditingPhone = false;
+      _isSavingPhone = true;
     });
 
     await _authController.updateUserPhone(phone);
+
+    if (mounted) {
+      setState(() => _isSavingPhone = false);
+    }
   }
 
   @override
@@ -256,7 +262,7 @@ class _ProfileViewState extends State<ProfileView> {
                         onPressed:
                             (_isEditingPhone ||
                                     _phoneController.text.isEmpty) &&
-                                !_authController.isLoading
+                                !_isSavingPhone
                             ? _savePhone
                             : null,
                         style: ElevatedButton.styleFrom(
@@ -269,7 +275,7 @@ class _ProfileViewState extends State<ProfileView> {
                           disabledBackgroundColor: _primary.withOpacity(0.6),
                           disabledForegroundColor: Colors.white,
                         ),
-                        child: _authController.isLoading
+                        child: _isSavingPhone
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
