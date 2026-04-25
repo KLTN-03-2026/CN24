@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ride_now_khoaluan/controllers/auth_controller.dart';
 import 'package:ride_now_khoaluan/routes/app_routes.dart';
 
 void main() {
@@ -43,7 +44,13 @@ class _SmartRideScreenState extends State<SmartRideScreen>
     _progressController.forward();
     _progressController.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        Get.offAllNamed(AppRoutes.onboarding);
+        // Kiểm tra nếu user đã đăng nhập thì vào main, chưa thì vào onboarding
+        final authController = Get.find<AuthController>();
+        if (authController.isAuthenticated) {
+          Get.offAllNamed(AppRoutes.main);
+        } else {
+          Get.offAllNamed(AppRoutes.onboarding);
+        }
       }
     });
   }
