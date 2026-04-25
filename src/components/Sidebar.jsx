@@ -1,5 +1,5 @@
-import Icons from './Icons'
 import { sidebarLinks } from '../utils/helpers'
+import Icons from './Icons'
 
 function Sidebar({ activeNav, onNavClick, onlineDriverCount }) {
   return (

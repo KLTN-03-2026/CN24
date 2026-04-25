@@ -7,8 +7,10 @@ import {
   getTotalRevenue,
   getUsers,
   onOnlineDrivers,
+  onAllDrivers,
   onRecentRideRequests,
   onRecentTrips,
+  onDriverLocations,
 } from './firestoreService'
 
 import Sidebar from './components/Sidebar'
@@ -24,6 +26,7 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import MapPage from './pages/MapPage'
 import PaymentsPage from './pages/PaymentsPage'
 import SettingsPage from './pages/SettingsPage'
+import ErrorBoundary from './components/ErrorBoundary'
 
 import { formatNumber, formatCurrency } from './utils/helpers'
 
@@ -47,6 +50,9 @@ function App() {
   const [trips, setTrips] = useState([])
   const [rideRequests, setRideRequests] = useState([])
   const [onlineDriverCount, setOnlineDriverCount] = useState(0)
+  const [onlineDriversList, setOnlineDriversList] = useState([])
+  const [allDriversList, setAllDriversList] = useState([])
+  const [driverLocations, setDriverLocations] = useState([])
 
   // Load stats from Firestore
   const loadStats = useCallback(async () => {
@@ -110,13 +116,24 @@ function App() {
 
     const unsubDrivers = onOnlineDrivers((drivers) => {
       setOnlineDriverCount(drivers.length)
+      setOnlineDriversList(drivers)
       setStats(prev => ({ ...prev, onlineDrivers: drivers.length }))
+    })
+
+    const unsubAllDrivers = onAllDrivers((drivers) => {
+      setAllDriversList(drivers)
+    })
+
+    const unsubLocations = onDriverLocations((locations) => {
+      setDriverLocations(locations)
     })
 
     return () => {
       unsubTrips()
       unsubRequests()
       unsubDrivers()
+      unsubAllDrivers()
+      unsubLocations()
     }
   }, [loadStats])
 
@@ -167,7 +184,15 @@ function App() {
       case 'nav-analytics':
         return <AnalyticsPage stats={stats} trips={trips} />
       case 'nav-map':
-        return <MapPage />
+        const mergedDrivers = allDriversList.map(driver => {
+          const loc = driverLocations.find(l => l.driverId === (driver.id || driver.uid))
+          return loc ? { ...driver, ...loc } : driver
+        })
+        return (
+          <ErrorBoundary>
+            <MapPage drivers={mergedDrivers} trips={trips} />
+          </ErrorBoundary>
+        )
       case 'nav-payments':
         return <PaymentsPage trips={trips} />
       case 'nav-settings':

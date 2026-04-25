@@ -9,6 +9,7 @@ import {
   getCountFromServer,
   doc,
   deleteDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -324,5 +325,70 @@ export function onAllCustomers(callback, maxResults = 200) {
     callback(customers);
   }, (error) => {
     console.error('Realtime all customers error:', error);
+  });
+}
+
+/**
+ * Đồng bộ lại số chuyến đi và thu nhập của tất cả tài xế
+ */
+export async function syncDriverStats() {
+  try {
+    // 1. Lấy tất cả tài xế
+    const driversQuery = query(collection(db, 'users'), where('role', '==', 'driver'));
+    const driversSnapshot = await getDocs(driversQuery);
+    
+    const results = [];
+    
+    for (const driverDoc of driversSnapshot.docs) {
+      const driverId = driverDoc.id;
+      
+      // 2. Lấy tất cả chuyến đi của tài xế này (không lọc status ở query để tránh lỗi mismatch string)
+      const tripsQuery = query(
+        collection(db, 'trips'), 
+        where('driverId', '==', driverId)
+      );
+      
+      const tripsSnapshot = await getDocs(tripsQuery);
+      
+      // Lọc các chuyến đã hoàn thành (chấp nhận cả 'completed' và 'Hoàn thành')
+      const completedTrips = tripsSnapshot.docs.filter(t => {
+        const s = t.data().status;
+        return s === 'completed' || s === 'Hoàn thành';
+      });
+
+      const totalTrips = completedTrips.length;
+      
+      // 3. Tính tổng thu nhập
+      let earnings = 0;
+      completedTrips.forEach(t => {
+        earnings += (t.data().fare || 0);
+      });
+      
+      // 4. Cập nhật lại vào bảng users
+      await updateDoc(doc(db, 'users', driverId), {
+        totalTrips: totalTrips,
+        earnings: earnings
+      });
+      
+      results.push({ name: driverDoc.data().name, totalTrips, earnings });
+    }
+    
+    return { success: true, updatedCount: results.length };
+  } catch (error) {
+    console.error('Error syncing driver stats:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Realtime listener cho vị trí tài xế
+ */
+export function onDriverLocations(callback) {
+  const q = query(collection(db, 'driver_locations'));
+  return onSnapshot(q, (snapshot) => {
+    const locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(locations);
+  }, (error) => {
+    console.error('Realtime driver locations error:', error);
   });
 }

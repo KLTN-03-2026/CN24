@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { onAllDrivers } from '../firestoreService'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { onAllDrivers, syncDriverStats } from '../firestoreService'
 import { formatCurrency, formatFare, getInitials, formatDateShort } from '../utils/helpers'
 import Icons from '../components/Icons'
 
@@ -81,6 +81,8 @@ function DriversPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedDriver, setSelectedDriver] = useState(null)
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -89,6 +91,18 @@ function DriversPage() {
       setLoading(false)
     })
     return () => unsub()
+  }, [])
+
+  const handleSync = useCallback(async () => {
+    setSyncLoading(true)
+    const result = await syncDriverStats()
+    setSyncLoading(false)
+    if (result.success) {
+      setToast({ message: `Đã cập nhật dữ liệu cho ${result.updatedCount} tài xế!`, type: 'success' })
+    } else {
+      setToast({ message: `Lỗi: ${result.error}`, type: 'error' })
+    }
+    setTimeout(() => setToast(null), 3000)
   }, [])
 
   const filteredDrivers = useMemo(() => {
@@ -148,6 +162,14 @@ function DriversPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <button 
+          className="confirm-modal__btn confirm-modal__btn--delete" 
+          style={{ background: 'var(--primary-600)', minWidth: '160px' }}
+          onClick={handleSync}
+          disabled={syncLoading}
+        >
+          {syncLoading ? '⏳ Đang tính toán...' : '🔄 Cập nhật số chuyến'}
+        </button>
       </div>
 
       <div className="table-card rides-table-card">
@@ -206,6 +228,12 @@ function DriversPage() {
 
       {selectedDriver && (
         <DriverDetailModal driver={selectedDriver} onClose={() => setSelectedDriver(null)} />
+      )}
+
+      {toast && (
+        <div className={`rides-toast rides-toast--${toast.type}`} style={{ zIndex: 1000 }}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.message}
+        </div>
       )}
     </section>
   )
