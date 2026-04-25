@@ -254,6 +254,10 @@ class AuthService {
     await _firestoreService.updateUser(userModel);
   }
 
+  Stream<UserModel?> watchUserModel(String uid) {
+    return _firestoreService.watchUser(uid);
+  }
+
   Future<void> logOut() async {
     await _auth.signOut();
   }

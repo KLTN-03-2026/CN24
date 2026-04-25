@@ -6,12 +6,14 @@ import 'package:get/get.dart';
 import '../models/user_model.dart';
 import '../routes/app_routes.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 
 class AuthController extends GetxController {
   final AuthService _authService = AuthService();
+  final LocationService _locationService = LocationService();
 
   final Rx<User?> _user = Rx<User?>(null);
-  final Rx<UserModel?> _userModel = Rx<UserModel?>(null);
+  final Rx<UserModel?> userModelRx = Rx<UserModel?>(null);
 
   final RxBool _isLoading = false.obs;
   final RxString _error = ''.obs;
@@ -27,7 +29,7 @@ class AuthController extends GetxController {
   }
 
   User? get user => _user.value;
-  UserModel? get userModel => _userModel.value;
+  UserModel? get userModel => userModelRx.value;
   bool get isLoading => _isLoading.value;
   String get error => _error.value;
   bool get isAuthenticated => _user.value != null;
@@ -47,7 +49,7 @@ class AuthController extends GetxController {
     if (_isAuthenticating) return;
 
     if (user == null) {
-      _userModel.value = null;
+      userModelRx.value = null;
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (Get.currentRoute != AppRoutes.login) {
           Get.offAllNamed(AppRoutes.login);
@@ -59,13 +61,10 @@ class AuthController extends GetxController {
     try {
       _isLoading.value = true;
 
-      if (_userModel.value == null || _userModel.value!.id != user.uid) {
-        final model = await _authService.fetchUserModel(user.uid);
-        if (model == null) {
-          _error.value =
-              'Không tìm thấy user trong Firestore (users/${user.uid}).';
-        }
-        _userModel.value = model;
+      // Chuyển sang lắng nghe realtime thay vì chỉ fetch một lần
+      // giúp đồng bộ dữ liệu (số chuyến, thu nhập) ngay lập tức khi Firestore thay đổi
+      if (userModelRx.value == null || userModelRx.value!.id != user.uid) {
+        userModelRx.bindStream(_authService.watchUserModel(user.uid));
       }
     } catch (e) {
       _error.value = e.toString();
@@ -95,7 +94,7 @@ class AuthController extends GetxController {
         email,
         password,
       );
-      _userModel.value = userModel;
+      userModelRx.value = userModel;
 
       // In ra Role của người dùng vừa đăng nhập
       debugPrint('====================================');
@@ -148,7 +147,7 @@ class AuthController extends GetxController {
       }
 
       // Set userModel before unlocking to avoid race condition
-      _userModel.value = userModel;
+      userModelRx.value = userModel;
 
       Get.snackbar('Thành công', 'Đăng ký thành công!');
 
@@ -165,41 +164,57 @@ class AuthController extends GetxController {
   }
 
   Future<void> updateUserStatus({bool? isOnline, bool? isAvailable}) async {
-    if (_userModel.value == null) return;
+    if (userModelRx.value == null) return;
 
-    final updatedModel = _userModel.value!.copyWith(
-      isOnline: isOnline ?? _userModel.value!.isOnline,
-      isAvailable: isAvailable ?? _userModel.value!.isAvailable,
+    final user = userModelRx.value!;
+    final updatedModel = user.copyWith(
+      isOnline: isOnline ?? user.isOnline,
+      isAvailable: isAvailable ?? user.isAvailable,
     );
 
+    // 1. Cập nhật bảng 'users'
     await _authService.updateUserModel(updatedModel);
-    _userModel.value = updatedModel;
+    userModelRx.value = updatedModel;
+
+    // 2. Nếu là tài xế, cập nhật bảng 'driver_locations' để MatchingService tìm thấy
+    if (user.role == UserRole.driver) {
+      try {
+        await _locationService.updateDriverStatus(
+          user.id,
+          isOnline: isOnline,
+          isAvailable: isAvailable,
+        );
+      } catch (e) {
+        debugPrint('[AuthController] Sync status to driver_locations failed: $e');
+        // Không throw lỗi ở đây để tránh làm crash app, vì bảng users đã được update
+      }
+    }
   }
 
   Future<void> completeRide(double fare) async {
-    if (_userModel.value == null) return;
+    if (userModelRx.value == null) return;
 
-    final updatedModel = _userModel.value!.copyWith(
-      earnings: _userModel.value!.earnings + fare,
-      totalTrips: _userModel.value!.totalTrips + 1,
+    final updatedModel = userModelRx.value!.copyWith(
+      earnings: userModelRx.value!.earnings + fare,
+      totalTrips: userModelRx.value!.totalTrips + 1,
     );
 
     await _authService.updateUserModel(updatedModel);
-    _userModel.value = updatedModel;
+    userModelRx.value = updatedModel;
     debugPrint(
       '[AuthController] Ride completed. New earnings: ${updatedModel.earnings}',
     );
   }
 
   Future<void> updateUserPhone(String phone) async {
-    if (_userModel.value == null) return;
+    if (userModelRx.value == null) return;
 
     _isLoading.value = true;
     try {
-      final updatedModel = _userModel.value!.copyWith(phone: phone);
+      final updatedModel = userModelRx.value!.copyWith(phone: phone);
 
       await _authService.updateUserModel(updatedModel);
-      _userModel.value = updatedModel;
+      userModelRx.value = updatedModel;
       Get.snackbar('Thành công', 'Đã cập nhật số điện thoại.');
     } catch (e) {
       Get.snackbar('Lỗi', 'Không thể cập nhật số điện thoại: $e');
@@ -210,7 +225,7 @@ class AuthController extends GetxController {
 
   void logOut() async {
     await _authService.logOut();
-    _userModel.value = null;
+    userModelRx.value = null;
     Get.offAllNamed(AppRoutes.login);
   }
 
@@ -220,7 +235,7 @@ class AuthController extends GetxController {
 
       await _authService.logOut();
       // KHÔNG Get.offAll ở đây (để authStateChanges xử lý)
-      _userModel.value = null;
+      userModelRx.value = null;
     } catch (e) {
       _error.value = e.toString();
       Get.snackbar('Error', 'Failed To Sign Out');
@@ -238,7 +253,7 @@ class AuthController extends GetxController {
       _isLoading.value = true;
 
       await _authService.logOut();
-      _userModel.value = null;
+      userModelRx.value = null;
 
       // Navigate tường minh, không chờ postFrameCallback
       Get.offAllNamed(AppRoutes.login);

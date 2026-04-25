@@ -266,8 +266,12 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
               colorText: Colors.white,
               snackPosition: SnackPosition.BOTTOM,
             );
+          } else if (request.status == RideStatus.completed) {
+            if (Get.isDialogOpen == true) Get.back();
+            _clearRoute();
           } else if (request.status == RideStatus.cancelled ||
-              request.status == RideStatus.completed) {
+              request.status == RideStatus.rejected ||
+              request.status == RideStatus.timeout) {
             if (Get.isDialogOpen == true) Get.back();
             _stopTrackingDriver();
           }
@@ -279,7 +283,12 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
     _driverLocationSubscription = null;
     _rideRequestSubscription?.cancel();
     _rideRequestSubscription = null;
-    if (mounted) setState(() => driverLocation = null);
+    if (mounted) {
+      setState(() {
+        driverLocation = null;
+        _activeRide = null;
+      });
+    }
   }
 
   void _onSearchChanged(String query, bool isPickup) {
@@ -601,11 +610,19 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
 
   Future<void> _handleCancelRide() async {
     if (_activeRide == null) return;
+    final rideId = _activeRide!.id;
     try {
-      await _rideService.cancelRideRequest(_activeRide!.id);
-      _clearRoute();
+      // Thay vì _clearRoute(), ta chỉ dừng theo dõi và xóa _activeRide
+      // để giữ lại điểm đón/đến cho người dùng đặt lại nếu muốn
+      setState(() {
+        _activeRide = null;
+        _stopTrackingDriver();
+      });
+      
+      await _rideService.cancelRideRequest(rideId);
       Get.snackbar('Thông báo', 'Đã hủy chuyến xe.');
     } catch (e) {
+      debugPrint('Error cancelling ride: $e');
       Get.snackbar('Lỗi', 'Không thể hủy chuyến: $e');
     }
   }
@@ -693,7 +710,30 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      if (Get.isDialogOpen!) Get.back();
+      if (Get.isDialogOpen == true) Get.back();
+      
+      // Kiểm tra lại trạng thái thực tế trên Firestore trước khi xoá sạch state
+      // Tránh trường hợp Race Condition: Tài xế vừa Accept thì Matching logic lại Timeout
+      if (_activeRide != null) {
+        final rideId = _activeRide!.id;
+        final latestRequest = await _rideRepository.getRideRequest(rideId);
+        if (latestRequest != null && 
+            (latestRequest.status == RideStatus.accepted || 
+             latestRequest.status == RideStatus.ongoing)) {
+          // Nếu thực tế đã được nhận, thì không xoá state và để _listenToRideRequest xử lý
+          debugPrint('[CustomerHomeView] Race Condition detected: Driver accepted but matching timed out. Recovering...');
+          return;
+        }
+        
+        // Nếu thực sự là lỗi/timeout, mới huỷ request
+        _rideService.cancelRideRequest(rideId);
+      }
+
+      setState(() {
+        _activeRide = null;
+        _stopTrackingDriver();
+      });
+
       Get.snackbar(
         'Thông báo',
         e.toString().replaceFirst('Exception: ', ''),
@@ -1116,9 +1156,9 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
               _routePoints.isNotEmpty ||
               searchedLocation != null)
             DraggableScrollableSheet(
-              initialChildSize: _activeRide != null ? 0.3 : 0.35,
+              initialChildSize: _activeRide != null ? 0.35 : 0.35,
               minChildSize: 0.1,
-              maxChildSize: 0.45,
+              maxChildSize: 0.5,
               snap: true,
               builder: (context, scrollController) {
                 return Container(
@@ -1151,11 +1191,19 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
                             ),
                           ),
                         ),
-                        if (_activeRide != null &&
-                            (_activeRide!.status == RideStatus.accepted ||
+                        if (_activeRide != null)
+                          () {
+                            if (_activeRide!.status == RideStatus.accepted ||
                                 _activeRide!.status == RideStatus.on_the_way ||
-                                _activeRide!.status == RideStatus.ongoing))
-                          _buildActiveRidePanel()
+                                _activeRide!.status == RideStatus.ongoing) {
+                              return _buildActiveRidePanel();
+                            } else if (_activeRide!.status == RideStatus.pending ||
+                                _activeRide!.status == RideStatus.searching_driver ||
+                                _activeRide!.status == RideStatus.driver_assigned) {
+                              return _buildSearchingPanel();
+                            }
+                            return const SizedBox.shrink();
+                          }()
                         else if (_routePoints.isNotEmpty)
                           _buildRouteInfoPanel()
                         else if (searchedLocation != null)
@@ -1463,6 +1511,94 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchingPanel() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2ECC71)),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Đang tìm tài xế gần bạn...',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 15),
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.circle, color: Colors.green, size: 12),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _activeRide?.pickupAddress ?? '...',
+                        style: const TextStyle(fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(left: 5),
+                  child: SizedBox(
+                    height: 15,
+                    child: VerticalDivider(width: 1, color: Colors.grey),
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.red, size: 14),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _activeRide?.destinationAddress ?? '...',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 25),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _handleCancelRide,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: const BorderSide(color: Colors.red),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Hủy yêu cầu',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ),
           ),
         ],
       ),

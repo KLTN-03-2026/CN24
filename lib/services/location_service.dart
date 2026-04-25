@@ -61,21 +61,40 @@ class LocationService {
     _positionStreamSubscription = null;
   }
 
-  Future<void> _updateDriverLocationInFirestore(String driverId, Position position) async {
+  Future<void> updateDriverStatus(String driverId, {bool? isOnline, bool? isAvailable}) async {
     try {
-      final model = DriverLocationModel(
-        driverId: driverId,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        isOnline: true,
-        isAvailable: true,
-        updatedAt: DateTime.now(),
-      );
+      final Map<String, dynamic> data = {
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (isOnline != null) data['isOnline'] = isOnline;
+      if (isAvailable != null) data['isAvailable'] = isAvailable;
 
       await _firestore
           .collection('driver_locations')
           .doc(driverId)
-          .set(model.toMap());
+          .set(data, SetOptions(merge: true))
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception('Timeout updating driver status in driver_locations'),
+          );
+    } catch (e) {
+      debugPrint('[LocationService] Status Update Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _updateDriverLocationInFirestore(String driverId, Position position) async {
+    try {
+      // Sử dụng set với merge: true để chỉ cập nhật các trường này mà không ghi đè isOnline/isAvailable
+      await _firestore
+          .collection('driver_locations')
+          .doc(driverId)
+          .set({
+            'driverId': driverId,
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('[LocationService] Update Error: $e');
     }

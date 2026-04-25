@@ -161,4 +161,15 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  Stream<UserModel?> watchUser(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists || doc.data() == null) return null;
+          return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+        });
+  }
 }

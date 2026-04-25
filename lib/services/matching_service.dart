@@ -25,45 +25,60 @@ class MatchingService {
       // 1. Cập nhật trạng thái đang tìm kiếm
       await _rideRepository.updateRideStatus(request.id, RideStatus.searching_driver);
 
-      // 2. Lấy danh sách tài xế online & available
       print('DEBUG: [MatchingService] Đang tìm kiếm tài xế gần nhất cho chuyến xe: ${request.id}');
-      final driverSnapshot = await _firestore
-          .collection('driver_locations')
+
+      // 2. Lấy danh sách tài xế THỰC SỰ online từ bảng users (nguồn chuẩn)
+      final usersSnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'driver')
           .where('isOnline', isEqualTo: true)
           .where('isAvailable', isEqualTo: true)
           .get();
 
-      if (driverSnapshot.docs.isEmpty) {
-        print('DEBUG: [MatchingService] Không tìm thấy tài xế nào online trong driver_locations.');
+      if (usersSnapshot.docs.isEmpty) {
+        print('DEBUG: [MatchingService] Không tìm thấy tài xế nào online trong bảng users.');
         await _rideRepository.updateRideStatus(request.id, RideStatus.timeout);
         throw Exception('Không tìm thấy tài xế nào online.');
       }
 
-      print('DEBUG: [MatchingService] Tìm thấy ${driverSnapshot.docs.length} tài xế đang hoạt động.');
+      // Tập hợp ID tài xế thực sự online
+      final onlineDriverIds = usersSnapshot.docs.map((doc) => doc.id).toSet();
+      print('DEBUG: [MatchingService] Tài xế THỰC SỰ online (từ bảng users): $onlineDriverIds');
 
-      // 3. Tính khoảng cách và sắp xếp
+      // 3. Lấy vị trí từ driver_locations chỉ cho các tài xế đã xác nhận online
       List<Map<String, dynamic>> driversWithDistance = [];
-      for (var doc in driverSnapshot.docs) {
-        final driverLoc = DriverLocationModel.fromMap(doc.data());
-        double dist = calculateDistance(
-          request.pickupLatitude,
-          request.pickupLongitude,
-          driverLoc.latitude,
-          driverLoc.longitude,
-        );
-        driversWithDistance.add({
-          'driverId': driverLoc.driverId,
-          'distance': dist,
-        });
+      for (var driverId in onlineDriverIds) {
+        final locDoc = await _firestore.collection('driver_locations').doc(driverId).get();
+        if (locDoc.exists) {
+          final driverLoc = DriverLocationModel.fromMap(locDoc.data()!);
+          double dist = calculateDistance(
+            request.pickupLatitude,
+            request.pickupLongitude,
+            driverLoc.latitude,
+            driverLoc.longitude,
+          );
+          driversWithDistance.add({
+            'driverId': driverId,
+            'distance': dist,
+          });
+        }
+      }
+
+      if (driversWithDistance.isEmpty) {
+        print('DEBUG: [MatchingService] Không tìm thấy vị trí cho bất kỳ tài xế online nào.');
+        await _rideRepository.updateRideStatus(request.id, RideStatus.timeout);
+        throw Exception('Không tìm thấy tài xế nào có vị trí.');
       }
 
       driversWithDistance.sort((a, b) => a['distance'].compareTo(b['distance']));
+      print('DEBUG: [MatchingService] Tìm thấy ${driversWithDistance.length} tài xế đang hoạt động.');
       print('DEBUG: [MatchingService] Danh sách tài xế ưu tiên: ${driversWithDistance.map((d) => "${d['driverId']} (${d['distance'].toStringAsFixed(2)}km)").toList()}');
 
-      // 4. Thử từng tài xế một
+      // 4. Lần lượt mời các tài xế
       for (var driver in driversWithDistance) {
-        print('DEBUG: [MatchingService] Thử mời tài xế: ${driver['driverId']}...');
-        bool result = await _tryAssignDriver(request.id, driver['driverId'], driver['distance']);
+        final driverId = driver['driverId'];
+        print('DEBUG: [MatchingService] Đang kiểm tra trạng thái và mời tài xế: $driverId...');
+        bool result = await _tryAssignDriver(request.id, driverId, driver['distance']);
         if (result) {
           print('DEBUG: [MatchingService] CHÚC MỪNG: Tài xế ${driver['driverId']} đã nhận chuyến.');
           return; 
@@ -88,18 +103,43 @@ class MatchingService {
       final userDoc = await _firestore.collection('users').doc(driverId).get();
       if (userDoc.exists) {
         final userData = userDoc.data();
+        
+        // Double-check trạng thái từ bảng users (nguồn chuẩn)
+        bool isOnlineInDb = userData?['isOnline'] ?? false;
+        bool isAvailableInDb = userData?['isAvailable'] ?? false;
+        
+        print('DEBUG: [MatchingService] Kiểm tra thực tế tài xế $driverId: isOnline=$isOnlineInDb, isAvailable=$isAvailableInDb');
+
+        if (!isOnlineInDb || !isAvailableInDb) {
+          print('DEBUG: [MatchingService] BỎ QUA tài xế $driverId vì trạng thái thực tế là Offline/Bận.');
+          // Tự động đồng bộ lại bảng driver_locations
+          await _firestore.collection('driver_locations').doc(driverId).set({
+            'isOnline': isOnlineInDb,
+            'isAvailable': isAvailableInDb,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          return false;
+        }
+
         driverPhone = userData?['phone'];
         driverName = userData?['name'];
+      } else {
+        // Tài xế không tồn tại trong bảng users (ghost driver) -> xoá khỏi driver_locations và bỏ qua
+        print('DEBUG: [MatchingService] Tài xế $driverId không tồn tại trong users. Xoá khỏi driver_locations và bỏ qua.');
+        await _firestore.collection('driver_locations').doc(driverId).delete();
+        return false;
       }
     } catch (e) {
       print('Error fetching driver info: $e');
+      return false; // Skip if we can't verify info
     }
 
     // 2. Gán tài xế kèm thông tin
     print('DEBUG: [MatchingService] Đang thông báo cho tài xế: ${driverName ?? driverId} (Khoảng cách: ${distance.toStringAsFixed(2)} km)');
     await _rideRepository.assignDriver(requestId, driverId, distance, driverPhone, driverName);
+    print('DEBUG: [MatchingService] Đã gọi assignDriver cho requestId: $requestId');
 
-    // Chờ phản hồi trong 10 giây (điều chỉnh từ 15)
+    // Chờ phản hồi trong 5 phút (để dễ dàng test thủ công)
     Completer<bool> responseCompleter = Completer<bool>();
     
     StreamSubscription? subscription;
@@ -118,7 +158,7 @@ class MatchingService {
     // Timeout handled by Future.wait or similar
     try {
        bool accepted = await responseCompleter.future.timeout(
-        const Duration(seconds: 10),
+        const Duration(minutes: 3),
         onTimeout: () {
           print('DEBUG: [MatchingService] Tài xế $driverId: HẾT THỜI GIAN phản hồi (Timeout)');
           subscription?.cancel();

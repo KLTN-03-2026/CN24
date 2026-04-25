@@ -33,17 +33,25 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Luôn lắng nghe active ride nếu đã có driverId (phục vụ việc khôi phục chuyến khi restart app)
-    // Bất kể đang Online hay Offline.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final driverId = _authController.userModel?.id;
-      if (driverId != null) {
-        _startWatchingActiveRide(driverId);
+    
+    // Lắng nghe sự thay đổi của userModel để khởi chạy các dịch vụ tương ứng
+    ever(_authController.userModelRx, (user) {
+      if (user != null) {
+        _startWatchingActiveRide(user.id);
+        if (user.isOnline == true) {
+          _startDriverServices();
+        }
       }
+    });
 
-      // Khởi tạo các dịch vụ khác nếu đang Online
-      if (_authController.userModel?.isOnline ?? false) {
-        _startDriverServices();
+    // Chạy thử lần đầu nếu user đã có sẵn
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = _authController.userModel;
+      if (user != null) {
+        _startWatchingActiveRide(user.id);
+        if (user.isOnline == true) {
+          _startDriverServices();
+        }
       }
     });
   }
@@ -56,6 +64,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   void _startDriverServices() {
     final driverId = _authController.userModel?.id;
+    print('DEBUG: [DriverHomeScreen] _startDriverServices: driverId=$driverId');
     if (driverId == null) return;
 
     // 1. Cập nhật vị trí realtime
@@ -66,7 +75,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _requestSubscription = _rideRepository
         .watchIncomingRequests(driverId)
         .listen((requests) {
+          print('DEBUG: [DriverHomeScreen] Nhận được ${requests.length} requests mới');
           if (requests.isNotEmpty) {
+            print('DEBUG: [DriverHomeScreen] Request đầu tiên: ${requests.first.id}, status: ${requests.first.status}');
             if (mounted) {
               setState(() => _currentRequest = requests.first);
             }
@@ -123,6 +134,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('DEBUG: [DriverHomeScreen] Build: _activeRide=${_activeRide?.id}, _currentRequest=${_currentRequest?.id}');
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F8),
       appBar: AppBar(
@@ -309,51 +321,63 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   final accepted = _currentRequest!;
                   Get.showOverlay(
                     asyncFunction: () async {
-                      final driver = _authController.userModel;
-                      await _rideRepository.acceptRide(
-                        accepted.id,
-                        driver?.name ?? 'Tài xế',
-                        driver?.phone ?? '',
-                      );
+                      try {
+                        final driver = _authController.userModel;
+                        await _rideRepository.acceptRide(
+                          accepted.id,
+                          driver?.name ?? 'Tài xế',
+                          driver?.phone ?? '',
+                        );
 
-                      // Tạo trip ongoing ngay khi accept
-                      final trip = TripModel(
-                        id: accepted.id,
-                        customerId: accepted.customerId,
-                        customerName: accepted.customerName,
-                        driverId: driver?.id ?? '',
-                        driverName: driver?.name ?? 'Tài xế',
-                        pickupAddress: accepted.pickupAddress,
-                        pickupLatitude: accepted.pickupLatitude,
-                        pickupLongitude: accepted.pickupLongitude,
-                        destinationAddress: accepted.destinationAddress,
-                        destinationLatitude: accepted.destinationLatitude,
-                        destinationLongitude: accepted.destinationLongitude,
-                        fare: accepted.fare ?? 0,
-                        distance: accepted.distanceInKm ?? 0,
-                        status: 'ongoing',
-                        paymentMethod: accepted.paymentMethod,
-                        createdAt: DateTime.now(),
-                      );
-                      await _rideRepository.createOngoingTrip(trip);
+                        // Tạo trip ongoing ngay khi accept
+                        final trip = TripModel(
+                          id: accepted.id,
+                          customerId: accepted.customerId,
+                          customerName: accepted.customerName,
+                          driverId: driver?.id ?? '',
+                          driverName: driver?.name ?? 'Tài xế',
+                          pickupAddress: accepted.pickupAddress,
+                          pickupLatitude: accepted.pickupLatitude,
+                          pickupLongitude: accepted.pickupLongitude,
+                          destinationAddress: accepted.destinationAddress,
+                          destinationLatitude: accepted.destinationLatitude,
+                          destinationLongitude: accepted.destinationLongitude,
+                          fare: accepted.fare ?? 0,
+                          distance: accepted.distanceInKm ?? 0,
+                          status: 'ongoing',
+                          paymentMethod: accepted.paymentMethod,
+                          createdAt: DateTime.now(),
+                        );
+                        await _rideRepository.createOngoingTrip(trip);
 
-                      if (mounted) setState(() => _currentRequest = null);
-                      // Chuyển status driver sang bận
-                      await _authController.updateUserStatus(
-                        isAvailable: false,
-                      );
-                      Get.snackbar(
-                        "Thành công",
-                        "Bạn đã nhận cuốc xe thành công! Hãy bắt đầu di chuyển.",
-                        backgroundColor: Colors.green,
-                        colorText: Colors.white,
-                        snackPosition: SnackPosition.TOP,
-                        icon: const Icon(
-                          Icons.check_circle,
-                          color: Colors.white,
-                        ),
-                        duration: const Duration(seconds: 4),
-                      );
+                        if (mounted) setState(() => _currentRequest = null);
+                        // Chuyển status driver sang bận
+                        await _authController.updateUserStatus(
+                          isAvailable: false,
+                        );
+                        Get.snackbar(
+                          "Thành công",
+                          "Bạn đã nhận cuốc xe thành công! Hãy bắt đầu di chuyển.",
+                          backgroundColor: Colors.green,
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.TOP,
+                          icon: const Icon(
+                            Icons.check_circle,
+                            color: Colors.white,
+                          ),
+                          duration: const Duration(seconds: 4),
+                        );
+                      } catch (e) {
+                        Get.snackbar(
+                          "Thất bại",
+                          e.toString().replaceFirst('Exception: ', ''),
+                          backgroundColor: Colors.red,
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.TOP,
+                          duration: const Duration(seconds: 4),
+                        );
+                        if (mounted) setState(() => _currentRequest = null);
+                      }
                     },
                     loadingWidget: const Center(
                       child: CircularProgressIndicator(),

@@ -15,11 +15,41 @@ class RideRepository {
         .set(request.toMap());
   }
 
-  // Cập nhật trạng thái ride request
+  // Lấy thông tin một request cụ thể
+  Future<RideRequestModel?> getRideRequest(String requestId) async {
+    final doc =
+        await _firestore.collection('ride_requests').doc(requestId).get();
+    if (!doc.exists) return null;
+    return RideRequestModel.fromMap(doc.data() as Map<String, dynamic>);
+  }
+
+  // Cập nhật trạng thái ride request (có kiểm tra để tránh ghi đè trạng thái đã được tài xế nhận)
   Future<void> updateRideStatus(String requestId, RideStatus status) async {
-    await _firestore.collection('ride_requests').doc(requestId).update({
-      'status': status.name,
-    });
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _firestore.collection('ride_requests').doc(requestId);
+        final snapshot = await transaction.get(docRef);
+
+        if (!snapshot.exists) return;
+
+        final currentStatus = snapshot.get('status') as String;
+
+        // Nếu đã được chấp nhận hoặc đang đi, không cho phép quay lại trạng thái chờ/timeout
+        if (currentStatus == RideStatus.accepted.name ||
+            currentStatus == RideStatus.on_the_way.name ||
+            currentStatus == RideStatus.ongoing.name ||
+            currentStatus == RideStatus.completed.name) {
+          if (status == RideStatus.timeout || status == RideStatus.cancelled) {
+            debugPrint('[RideRepository] Từ chối cập nhật $status vì trạng thái hiện tại là $currentStatus');
+            return;
+          }
+        }
+
+        transaction.update(docRef, {'status': status.name});
+      });
+    } catch (e) {
+      debugPrint('[RideRepository] Error updating ride status: $e');
+    }
   }
 
   // Chấp nhận chuyến xe (cập nhật status + thông tin tài xế) - Sử dụng Transaction để an toàn
@@ -28,19 +58,25 @@ class RideRepository {
     String driverName,
     String driverPhone,
   ) async {
-    try {
-      await _firestore.runTransaction((transaction) async {
+    const maxRetries = 3;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
         final DocumentReference rideRef = _firestore
             .collection('ride_requests')
             .doc(requestId);
-        final DocumentSnapshot snapshot = await transaction.get(rideRef);
+        
+        // Đọc trạng thái hiện tại
+        final snapshot = await rideRef.get().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('Timeout khi đọc ride request'),
+        );
 
         if (!snapshot.exists) {
           throw Exception('Chuyến xe không tồn tại.');
         }
 
         final String currentStatus = snapshot.get('status');
-        // Chỉ cho phép "Chấp nhận" nếu dang ở trạng thái driver_assigned hoặc searching_driver
+        // Chỉ cho phép "Chấp nhận" nếu đang ở trạng thái driver_assigned hoặc searching_driver
         if (currentStatus != RideStatus.driver_assigned.name &&
             currentStatus != RideStatus.searching_driver.name) {
           throw Exception(
@@ -48,15 +84,27 @@ class RideRepository {
           );
         }
 
-        transaction.update(rideRef, {
+        // Cập nhật trạng thái
+        await rideRef.update({
           'status': RideStatus.accepted.name,
           'driverName': driverName,
           'driverPhone': driverPhone,
-        });
-      });
-    } catch (e) {
-      debugPrint('[RideRepository] Error in acceptRide Transaction: $e');
-      rethrow;
+        }).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('Timeout khi cập nhật ride request'),
+        );
+
+        debugPrint('[RideRepository] acceptRide thành công cho requestId: $requestId');
+        return; // Thành công, thoát khỏi vòng lặp retry
+
+      } catch (e) {
+        debugPrint('[RideRepository] acceptRide lần $attempt thất bại: $e');
+        if (attempt == maxRetries) {
+          rethrow; // Hết số lần thử, throw lỗi ra ngoài
+        }
+        // Chờ 1 giây trước khi thử lại
+        await Future.delayed(const Duration(seconds: 1));
+      }
     }
   }
 
@@ -95,16 +143,22 @@ class RideRepository {
     return _firestore
         .collection('ride_requests')
         .where('driverId', isEqualTo: driverId)
-        .where('status', isEqualTo: RideStatus.driver_assigned.name)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
+          (snapshot) {
+            final requests = snapshot.docs
               .map(
                 (doc) => RideRequestModel.fromMap(
                   doc.data() as Map<String, dynamic>,
                 ),
               )
-              .toList(),
+              .where((r) => r.status == RideStatus.driver_assigned) // Lọc trong Dart để tránh lỗi index
+              .toList();
+            
+            // Sắp xếp lấy request mới nhất lên đầu
+            requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return requests;
+          },
         );
   }
 
@@ -126,6 +180,7 @@ class RideRepository {
           }).toList();
 
           if (activeDocs.isNotEmpty) {
+            print('DEBUG: [RideRepository] Tìm thấy ${activeDocs.length} active rides trong ride_requests');
             // Sắp xếp lấy chuyến mới nhất
             activeDocs.sort((a, b) {
               final aTime = a.get('createdAt') as Timestamp?;
@@ -140,18 +195,20 @@ class RideRepository {
           final tripSnapshot = await _firestore
               .collection('trips')
               .where('driverId', isEqualTo: driverId)
-              .where('status', isEqualTo: 'ongoing')
-              .limit(1)
               .get();
 
-          if (tripSnapshot.docs.isNotEmpty) {
-            final tripId = tripSnapshot.docs.first.id;
+          final ongoingTrips = tripSnapshot.docs.where((doc) => doc.data()['status'] == 'ongoing').toList();
+
+          if (ongoingTrips.isNotEmpty) {
+            print('DEBUG: [RideRepository] Tìm thấy ongoing trip trong trips cho driver: $driverId');
+            final tripId = ongoingTrips.first.id;
             final requestDoc = await _firestore.collection('ride_requests').doc(tripId).get();
             if (requestDoc.exists) {
               return RideRequestModel.fromMap(requestDoc.data() as Map<String, dynamic>);
             }
           }
 
+          print('DEBUG: [RideRepository] Không tìm thấy bất kỳ active ride nào cho driver: $driverId');
           return null;
         });
   }
@@ -190,12 +247,12 @@ class RideRepository {
       final tripSnapshot = await _firestore
           .collection('trips')
           .where('customerId', isEqualTo: customerId)
-          .where('status', isEqualTo: 'ongoing')
-          .limit(1)
           .get();
 
-      if (tripSnapshot.docs.isNotEmpty) {
-        final tripId = tripSnapshot.docs.first.id;
+      final ongoingTrips = tripSnapshot.docs.where((doc) => doc.data()['status'] == 'ongoing').toList();
+
+      if (ongoingTrips.isNotEmpty) {
+        final tripId = ongoingTrips.first.id;
         final requestDoc =
             await _firestore.collection('ride_requests').doc(tripId).get();
         if (requestDoc.exists) {
