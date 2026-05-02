@@ -11,6 +11,7 @@ function MapPage({ drivers = [], trips = [] }) {
   const [zoom] = useState(13)
   const markers = useRef({})
   const [mapError, setMapError] = useState(null)
+  const [mapLoaded, setMapLoaded] = useState(false)
 
   // Helper: Xác định trạng thái tài xế
   const getDriverStatus = (driver) => {
@@ -38,13 +39,36 @@ function MapPage({ drivers = [], trips = [] }) {
 
   // Helper: Lấy tọa độ
   const getCoordinates = (driver) => {
+    // Thử các field phổ biến
     let dLat = driver.lat || driver.latitude
     let dLng = driver.lng || driver.longitude
     
-    // Check location object (GeoPoint)
+    // Check location object (GeoPoint từ Firestore)
     if (!dLat && driver.location) {
-      dLat = driver.location.latitude
-      dLng = driver.location.longitude
+      if (typeof driver.location.latitude === 'number') {
+        dLat = driver.location.latitude
+        dLng = driver.location.longitude
+      } else if (driver.location._lat !== undefined) {
+        // GeoPoint serialized format
+        dLat = driver.location._lat
+        dLng = driver.location._long
+      }
+    }
+
+    // Check lastLocation object
+    if (!dLat && driver.lastLocation) {
+      if (typeof driver.lastLocation.latitude === 'number') {
+        dLat = driver.lastLocation.latitude
+        dLng = driver.lastLocation.longitude
+      }
+    }
+
+    // Check position object  
+    if (!dLat && driver.position) {
+      if (typeof driver.position.latitude === 'number') {
+        dLat = driver.position.latitude
+        dLng = driver.position.longitude
+      }
     }
 
     // Nếu vẫn không có, dùng tọa độ giả lập để test (chỉ khi driver online)
@@ -84,7 +108,9 @@ function MapPage({ drivers = [], trips = [] }) {
       map.current.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
 
       map.current.on('load', () => {
+        console.log('[MAP] Map loaded successfully!')
         setMapError(null)
+        setMapLoaded(true)
       })
 
     } catch (err) {
@@ -99,10 +125,12 @@ function MapPage({ drivers = [], trips = [] }) {
     }
   }, [lng, lat, zoom])
 
-  // Hiển thị tài xế thật lên bản đồ
+  // Hiển thị tài xế thật lên bản đồ - CHỈ chạy khi map đã load xong
   useEffect(() => {
-    if (!map.current) return
+    if (!map.current || !mapLoaded) return
     const maplibregl = window.maplibregl
+
+
 
     // Xóa các marker cũ không còn trong danh sách drivers mới
     const currentDriverIds = drivers.map(d => d.id || d.uid)
@@ -121,143 +149,239 @@ function MapPage({ drivers = [], trips = [] }) {
       
       if (!dLat || !dLng) return
 
+
+
       if (!markers.current[driverId]) {
-        // Tạo element cho marker
+        // Tạo element cho marker - dùng hình xe máy từ trên xuống
         const el = document.createElement('div')
         el.className = `map-marker map-marker--${status}`
         el.style.cursor = 'pointer'
-        el.style.filter = 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))'
         el.style.transition = 'all 0.3s ease'
         
+        const { label, color: statusColor, status: driverStatus } = getDriverStatus(driver)
+        const statusIcon = driverStatus === 'available' ? '🟢' : driverStatus === 'busy' ? '🔴' : '⚫'
+        
         el.innerHTML = `
-          <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-            <div class="marker-bg" style="position: absolute; width: 100%; height: 100%; background: white; border-radius: 50%; border: 3px solid ${color}; box-shadow: 0 0 10px ${color}44;"></div>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: relative; z-index: 1;">
-              <circle cx="16.5" cy="14.5" r="2.5" fill="${color}"/>
-              <circle cx="7.5" cy="14.5" r="2.5" fill="${color}"/>
-              <path d="M16.5 12.5L14.5 7.5H9.5L7.5 12.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M7 12.5H17" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M11.5 7.5V12.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-            ${isSimulated ? '<div style="position: absolute; top: -5px; right: -5px; background: #f59e0b; color: white; font-size: 8px; padding: 2px 4px; border-radius: 4px; font-weight: bold; border: 1px solid white;">SIM</div>' : ''}
+          <div class="marker-content" style="position: relative; width: 44px; height: 64px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+            <img src="/images/motorcycle-top.png" alt="driver" style="width: 40px; height: 58px; object-fit: contain; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); pointer-events: none;" />
+            <div class="status-dot" style="position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: ${statusColor}; border: 2px solid white; box-shadow: 0 0 6px ${statusColor}88;"></div>
+            ${isSimulated ? '<div style="position: absolute; top: -5px; right: -8px; background: #f59e0b; color: white; font-size: 7px; padding: 1px 3px; border-radius: 3px; font-weight: bold; border: 1px solid white;">SIM</div>' : ''}
           </div>
         `
 
-        // Tạo Popup
+        // Tạo Popup hiện khi hover - chỉ hiện tên + trạng thái online/offline
         const popup = new maplibregl.Popup({ 
-          offset: 25, 
+          offset: [0, -35], 
           closeButton: false, 
           closeOnClick: false,
           className: 'driver-popup'
         }).setHTML(`
-          <div style="padding: 8px 12px; min-width: 150px;">
-            <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #0f172a;">${driver.name || driver.fullName || 'Tài xế'}</div>
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color};"></span>
-              <span style="font-size: 12px; color: ${color}; font-weight: 600;">${label}</span>
+          <div style="padding: 10px 14px; min-width: 140px; text-align: center;">
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #0f172a;">${driver.name || driver.fullName || 'Tài xế'}</div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: ${driverStatus === 'available' ? '#dcfce7' : driverStatus === 'busy' ? '#fee2e2' : '#f1f5f9'}; padding: 4px 12px; border-radius: 20px;">
+              <span style="font-size: 10px;">${statusIcon}</span>
+              <span style="font-size: 13px; color: ${statusColor}; font-weight: 700; letter-spacing: 0.5px;">${label}</span>
             </div>
-            <div style="font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; pt: 4px; margin-top: 4px;">
-              <div>BSX: ${driver.vehiclePlate || '—'}</div>
-              <div>SĐT: ${driver.phone || '—'}</div>
-              ${isSimulated ? '<div style="color: #f59e0b; margin-top: 2px;">⚠️ Vị trí giả lập (Thiếu GPS)</div>' : ''}
-            </div>
+            ${driver.vehiclePlate ? '<div style="font-size: 11px; color: #64748b; margin-top: 6px;">BSX: ' + driver.vehiclePlate + '</div>' : ''}
           </div>
         `)
 
+        const contentEl = el.querySelector('.marker-content')
+
         el.addEventListener('mouseenter', () => {
-          markers.current[driverId].setPopup(popup)
+          markers.current[driverId]?.setPopup(popup)
           popup.addTo(map.current)
-          el.style.transform = 'scale(1.1) translateY(-5px)'
+          if (contentEl) {
+            contentEl.style.transform = 'scale(1.15)'
+            contentEl.style.filter = 'drop-shadow(0 6px 12px rgba(0,0,0,0.35))'
+          }
         })
 
         el.addEventListener('mouseleave', () => {
           popup.remove()
-          el.style.transform = 'scale(1) translateY(0)'
+          if (contentEl) {
+            contentEl.style.transform = 'scale(1)'
+            contentEl.style.filter = 'none'
+          }
         })
 
-        markers.current[driverId] = new maplibregl.Marker(el)
+        markers.current[driverId] = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([dLng, dLat])
           .addTo(map.current)
       } else {
         markers.current[driverId].setLngLat([dLng, dLat])
-        // Cập nhật lại HTML nếu trạng thái thay đổi
+        // Cập nhật trạng thái dot
         const markerEl = markers.current[driverId].getElement()
-        const bgEl = markerEl.querySelector('.marker-bg')
-        if (bgEl) bgEl.style.borderColor = color
-        markerEl.querySelectorAll('circle').forEach(p => p.setAttribute('fill', color))
-        markerEl.querySelectorAll('path[stroke]').forEach(p => p.setAttribute('stroke', color))
+        const dotEl = markerEl.querySelector('.status-dot')
+        const isOnline = driver.isOnline === true
+        const statusColor = isOnline ? '#22c55e' : '#94a3b8'
+        if (dotEl) {
+          dotEl.style.background = statusColor
+          dotEl.style.boxShadow = `0 0 6px ${statusColor}88`
+        }
       }
     })
-  }, [drivers, trips])
+  }, [drivers, trips, mapLoaded])
+
+  // Fly tới vị trí tài xế
+  const flyToDriver = (dLat, dLng) => {
+    if (map.current && dLat && dLng) {
+      map.current.flyTo({ center: [dLng, dLat], zoom: 16, duration: 1500 })
+    }
+  }
 
   return (
     <section className="rides-page" style={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
       <div className="rides-page__header" style={{ marginBottom: '16px' }}>
         <div className="rides-page__title-block">
           <h2 className="rides-page__title">🗺️ Bản đồ trực tuyến (TrackAsia)</h2>
-          <p className="rides-page__subtitle">Giám sát vị trí thực tế của {drivers.length} tài xế đang online</p>
+          <p className="rides-page__subtitle">Giám sát vị trí thực tế của {drivers.length} tài xế</p>
         </div>
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--font-sm)', color: 'var(--surface-300)' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e66' }} /> Sẵn sàng
+            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e66' }} /> Online
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--font-sm)', color: 'var(--surface-300)' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef444466' }} /> Đang bận
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--font-sm)', color: 'var(--surface-300)' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#94a3b8', boxShadow: '0 0 8px #94a3b866' }} /> Ngoại tuyến
+            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#94a3b8', boxShadow: '0 0 8px #94a3b866' }} /> Offline
           </div>
         </div>
       </div>
 
-      <div style={{ flex: 1, position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--surface-800)' }}>
-        <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-        
-        {mapError && (
-          <div style={{ 
-            position: 'absolute', 
-            inset: 0, 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            background: 'rgba(15, 23, 42, 0.9)', 
-            zIndex: 10,
-            color: 'white',
-            textAlign: 'center',
-            padding: '20px'
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
-            <h3 style={{ marginBottom: '8px' }}>Không thể hiển thị bản đồ</h3>
-            <p style={{ color: 'var(--surface-400)', maxWidth: '400px', marginBottom: '20px' }}>{mapError}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              style={{ padding: '10px 20px', background: 'var(--primary-600)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
-            >
-              Thử lại
-            </button>
-          </div>
-        )}
+      <div style={{ flex: 1, display: 'flex', gap: '16px', minHeight: 0 }}>
+        {/* Bản đồ */}
+        <div style={{ flex: '1 1 70%', position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--surface-800)' }}>
+          <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          
+          {mapError && (
+            <div style={{ 
+              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', 
+              background: 'rgba(15, 23, 42, 0.9)', zIndex: 10, color: 'white', textAlign: 'center', padding: '20px'
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
+              <h3 style={{ marginBottom: '8px' }}>Không thể hiển thị bản đồ</h3>
+              <p style={{ color: 'var(--surface-400)', maxWidth: '400px', marginBottom: '20px' }}>{mapError}</p>
+              <button onClick={() => window.location.reload()}
+                style={{ padding: '10px 20px', background: 'var(--primary-600)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }}>
+                Thử lại
+              </button>
+            </div>
+          )}
 
-        {/* Live Status Overlay */}
+          {/* Live Status Overlay */}
+          <div style={{ 
+            position: 'absolute', bottom: '20px', left: '20px', 
+            background: 'rgba(15, 23, 42, 0.8)', padding: '12px 20px', 
+            borderRadius: 'var(--radius-md)', backdropFilter: 'blur(8px)',
+            border: '1px solid var(--surface-700)', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 5
+          }}>
+            <div style={{ animation: 'spin 4s linear infinite', color: 'var(--primary-400)' }}>{Icons.refresh}</div>
+            <div>
+              <div style={{ fontSize: '10px', color: 'var(--surface-500)', textTransform: 'uppercase', letterSpacing: '1px' }}>TrackAsia Live Engine</div>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>Đà Nẵng, Việt Nam</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bảng vị trí tài xế */}
         <div style={{ 
-          position: 'absolute', 
-          bottom: '20px', 
-          left: '20px', 
-          background: 'rgba(15, 23, 42, 0.8)', 
-          padding: '12px 20px', 
-          borderRadius: 'var(--radius-md)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid var(--surface-700)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          zIndex: 5
+          flex: '0 0 320px', background: 'var(--surface-900)', borderRadius: 'var(--radius-lg)', 
+          border: '1px solid var(--surface-800)', display: 'flex', flexDirection: 'column', overflow: 'hidden'
         }}>
-          <div style={{ animation: 'spin 4s linear infinite', color: 'var(--primary-400)' }}>{Icons.refresh}</div>
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--surface-500)', textTransform: 'uppercase', letterSpacing: '1px' }}>TrackAsia Live Engine</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Tâm điểm: Đà Nẵng, Việt Nam</div>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--surface-800)' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📍 Vị trí tài xế <span style={{ fontSize: '12px', color: 'var(--surface-400)', fontWeight: 400 }}>({drivers.length})</span>
+            </h3>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+            {drivers.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--surface-500)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🏍️</div>
+                <div>Chưa có tài xế nào</div>
+              </div>
+            ) : (
+              drivers.map(driver => {
+                const driverId = driver.id || driver.uid
+                const coords = getCoordinates(driver)
+                const isOnline = driver.isOnline === true
+                const hasCoords = coords.lat && coords.lng
+
+                return (
+                  <div key={driverId} style={{
+                    padding: '12px 14px', marginBottom: '6px',
+                    background: 'var(--surface-850, rgba(30,41,59,0.5))',
+                    borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-800)',
+                    transition: 'all 0.2s ease',
+                    cursor: hasCoords ? 'pointer' : 'default',
+                    opacity: hasCoords ? 1 : 0.6
+                  }}
+                    onClick={() => hasCoords && flyToDriver(coords.lat, coords.lng)}
+                    onMouseEnter={e => { if (hasCoords) e.currentTarget.style.borderColor = 'var(--primary-600)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--surface-800)' }}
+                  >
+                    {/* Hàng 1: Tên + Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${isOnline ? '#22c55e33' : '#94a3b833'}, ${isOnline ? '#22c55e11' : '#94a3b811'})`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: `2px solid ${isOnline ? '#22c55e' : '#94a3b8'}`,
+                          fontSize: '14px'
+                        }}>
+                          🏍️
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{driver.name || driver.fullName || 'Tài xế'}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--surface-400)' }}>{driver.vehiclePlate || '—'}</div>
+                        </div>
+                      </div>
+                      <span style={{
+                        padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
+                        background: isOnline ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)',
+                        color: isOnline ? '#22c55e' : '#94a3b8',
+                        border: `1px solid ${isOnline ? '#22c55e44' : '#94a3b844'}`
+                      }}>
+                        {isOnline ? '● Online' : '○ Offline'}
+                      </span>
+                    </div>
+
+                    {/* Hàng 2: Tọa độ */}
+                    <div style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '6px 10px'
+                    }}>
+                      {hasCoords ? (
+                        <>
+                          <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--surface-300)' }}>
+                            <span style={{ color: 'var(--surface-500)' }}>Lat:</span> {coords.lat.toFixed(6)}
+                            <br />
+                            <span style={{ color: 'var(--surface-500)' }}>Lng:</span> {coords.lng.toFixed(6)}
+                            {coords.isSimulated && <span style={{ color: '#f59e0b', marginLeft: '6px' }}>(SIM)</span>}
+                          </div>
+                          <div style={{
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            background: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '12px', flexShrink: 0, transition: 'transform 0.2s',
+                          }}
+                            title="Bay tới vị trí"
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.15)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            🎯
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: '11px', color: 'var(--surface-500)', fontStyle: 'italic' }}>
+                          Chưa có dữ liệu vị trí
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
       </div>

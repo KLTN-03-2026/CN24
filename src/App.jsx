@@ -185,7 +185,8 @@ function App() {
         return <AnalyticsPage stats={stats} trips={trips} />
       case 'nav-map':
         const mergedDrivers = allDriversList.map(driver => {
-          const loc = driverLocations.find(l => l.driverId === (driver.id || driver.uid))
+          const driverId = driver.id || driver.uid
+          const loc = driverLocations.find(l => l.driverId === driverId || l.id === driverId)
           return loc ? { ...driver, ...loc } : driver
         })
         return (
