@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_now_khoaluan/controllers/auth_controller.dart';
 import 'package:ride_now_khoaluan/models/user_model.dart';
+import 'package:ride_now_khoaluan/services/notification_service.dart';
+import 'package:ride_now_khoaluan/views/AI/chat_bot_view.dart';
 import 'package:ride_now_khoaluan/views/main/home/customer_home_view.dart';
 import 'package:ride_now_khoaluan/views/main/home/driver_home_view.dart';
 import 'package:ride_now_khoaluan/views/main/notifications/notification_view.dart';
@@ -18,7 +22,10 @@ class MainView extends StatefulWidget {
 
 class _MainViewState extends State<MainView> {
   final AuthController _authController = Get.find<AuthController>();
+  final NotificationService _notificationService = NotificationService();
   int _currentIndex = 0;
+  int _unreadCount = 0;
+  StreamSubscription<int>? _unreadSubscription;
 
   late final List<Widget> _screens = [
     Obx(() {
@@ -40,9 +47,42 @@ class _MainViewState extends State<MainView> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _startWatchingUnread();
+
+    // Lắng nghe khi user thay đổi (login/logout)
+    ever(_authController.userModelRx, (_) => _startWatchingUnread());
+  }
+
+  void _startWatchingUnread() {
+    _unreadSubscription?.cancel();
+    final userId = _authController.userModel?.id;
+    if (userId == null) return;
+
+    _unreadSubscription = _notificationService.watchUnreadCount(userId).listen((count) {
+      if (mounted) {
+        setState(() => _unreadCount = count);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _unreadSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Get.to(() => const ChatBotView()),
+        backgroundColor: const Color(0xFF1565C0),
+        child: const Icon(Icons.smart_toy_rounded, color: Colors.white),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -54,17 +94,29 @@ class _MainViewState extends State<MainView> {
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long),
             label: 'Trip',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
+            icon: Badge(
+              isLabelVisible: _unreadCount > 0,
+              label: Text(
+                _unreadCount > 99 ? '99+' : '$_unreadCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: Colors.red,
+              child: const Icon(Icons.notifications),
+            ),
             label: 'Notifications',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

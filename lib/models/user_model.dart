@@ -161,6 +161,7 @@ class UserModel {
 
   final double rating;
   final int totalTrips;
+  final int ratingCount;
   final double earnings;
   final DateTime createdAt;
 
@@ -179,6 +180,7 @@ class UserModel {
     this.longitude,
     this.rating = 0,
     this.totalTrips = 0,
+    this.ratingCount = 0,
     this.earnings = 0,
     required this.createdAt,
   });
@@ -206,6 +208,7 @@ class UserModel {
       longitude: (json['longitude'] as num?)?.toDouble(),
       rating: (json['rating'] as num?)?.toDouble() ?? 0,
       totalTrips: json['totalTrips'] ?? 0,
+      ratingCount: json['ratingCount'] ?? 0,
       earnings: (json['earnings'] as num?)?.toDouble() ?? 0,
       createdAt: _parseCreatedAt(json['createdAt']),
     );
@@ -219,6 +222,7 @@ class UserModel {
       'role': role.name,
       'rating': rating,
       'totalTrips': totalTrips,
+      'ratingCount': ratingCount,
       'earnings': earnings,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -251,6 +255,7 @@ class UserModel {
       longitude: (map['longitude'] as num?)?.toDouble(),
       rating: (map['rating'] as num?)?.toDouble() ?? 0,
       totalTrips: map['totalTrips'] ?? 0,
+      ratingCount: map['ratingCount'] ?? 0,
       earnings: (map['earnings'] as num?)?.toDouble() ?? 0,
       createdAt: _parseCreatedAt(map['createdAt']),
     );
@@ -271,6 +276,7 @@ class UserModel {
     double? longitude,
     double? rating,
     int? totalTrips,
+    int? ratingCount,
     double? earnings,
     DateTime? createdAt,
   }) {
@@ -289,6 +295,7 @@ class UserModel {
       longitude: longitude ?? this.longitude,
       rating: rating ?? this.rating,
       totalTrips: totalTrips ?? this.totalTrips,
+      ratingCount: ratingCount ?? this.ratingCount,
       earnings: earnings ?? this.earnings,
       createdAt: createdAt ?? this.createdAt,
     );

@@ -18,6 +18,8 @@ class TripModel {
   final String paymentMethod;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final double? rating;
+  final String? feedback;
 
   TripModel({
     required this.id,
@@ -37,6 +39,8 @@ class TripModel {
     required this.paymentMethod,
     required this.createdAt,
     this.completedAt,
+    this.rating,
+    this.feedback,
   });
 
   Map<String, dynamic> toMap() {
@@ -58,6 +62,8 @@ class TripModel {
       'paymentMethod': paymentMethod,
       'createdAt': Timestamp.fromDate(createdAt),
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'rating': rating,
+      'feedback': feedback,
     };
   }
 
@@ -80,6 +86,8 @@ class TripModel {
       paymentMethod: map['paymentMethod'] ?? 'Tiền mặt',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       completedAt: (map['completedAt'] as Timestamp?)?.toDate(),
+      rating: (map['rating'] as num?)?.toDouble(),
+      feedback: map['feedback'],
     );
   }
 }

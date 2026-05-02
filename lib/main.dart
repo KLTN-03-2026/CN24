@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_now_khoaluan/controllers/auth_controller.dart';
 import 'package:ride_now_khoaluan/routes/app_pages.dart';
+import 'package:ride_now_khoaluan/services/ai_service.dart';
 
 import 'firebase_options.dart';
 
@@ -12,6 +13,11 @@ void main() async {
   
   // Khởi tạo AuthController
   Get.put(AuthController());
+
+  // Khởi tạo AI Service với Gemini API Key
+  const geminiKey = String.fromEnvironment('GEMINI_API_KEY',
+      defaultValue: 'AIzaSyCEfHf_Kne9N2wL_XdNkc-1uqnmI580yGg');
+  AIService().initialize(geminiKey);
 
   runApp(const MyApp());
 }

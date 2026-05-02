@@ -118,6 +118,10 @@ class TripHistoryCard extends StatelessWidget {
                       _buildInfoChip(Icons.route, '${trip.distance.toStringAsFixed(1)} km'),
                       const SizedBox(width: 8),
                       _buildInfoChip(Icons.payments_outlined, trip.paymentMethod),
+                      if (trip.rating != null) ...[
+                        const SizedBox(width: 8),
+                        _buildInfoChip(Icons.star, '${trip.rating}', iconColor: Colors.amber),
+                      ],
                     ],
                   ),
                   Text(
@@ -180,7 +184,7 @@ class TripHistoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label) {
+  Widget _buildInfoChip(IconData icon, String label, {Color? iconColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -190,7 +194,7 @@ class TripHistoryCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: Colors.grey[500]),
+          Icon(icon, size: 14, color: iconColor ?? Colors.grey[500]),
           const SizedBox(width: 4),
           Text(
             label,

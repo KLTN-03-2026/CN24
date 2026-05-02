@@ -205,7 +205,7 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
         if (request.status == RideStatus.accepted ||
             request.status == RideStatus.on_the_way ||
             request.status == RideStatus.ongoing) {
-          if (Get.isDialogOpen == true) Get.back();
+          // No dialog to close anymore
         }
       }
     });
@@ -257,7 +257,6 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
           if (request.status == RideStatus.accepted &&
               request.driverId != null &&
               request.driverId!.isNotEmpty) {
-            if (Get.isDialogOpen == true) Get.back();
             _startTrackingDriver(request.driverId!);
             Get.snackbar(
               'Tài xế đã nhận chuyến',
@@ -267,12 +266,10 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
               snackPosition: SnackPosition.BOTTOM,
             );
           } else if (request.status == RideStatus.completed) {
-            if (Get.isDialogOpen == true) Get.back();
             _clearRoute();
           } else if (request.status == RideStatus.cancelled ||
               request.status == RideStatus.rejected ||
               request.status == RideStatus.timeout) {
-            if (Get.isDialogOpen == true) Get.back();
             _stopTrackingDriver();
           }
         });
@@ -635,44 +632,6 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
     }
 
     try {
-      Get.dialog(
-        barrierDismissible: false,
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(25),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: Color(0xFF2ECC71)),
-                const SizedBox(height: 20),
-                const Text(
-                  'Đang tìm tài xế gần bạn...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.none,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Vui lòng chờ trong giây lát',
-                  style: TextStyle(
-                    fontSize: 13,
-                    decoration: TextDecoration.none,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
       final userModel = _authController.userModel;
       if (userModel == null) throw Exception('Bạn cần đăng nhập để đặt xe.');
 
@@ -700,8 +659,6 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
       _listenToRideRequest(rideRequest.id);
       await _matchingService.findAndMatchDriver(rideRequest);
 
-      if (Get.isDialogOpen!) Get.back();
-
       Get.snackbar(
         'Thành công',
         'Tài xế đã nhận chuyến!',
@@ -710,7 +667,7 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      if (Get.isDialogOpen == true) Get.back();
+      // No dialog to close anymore
       
       // Kiểm tra lại trạng thái thực tế trên Firestore trước khi xoá sạch state
       // Tránh trường hợp Race Condition: Tài xế vừa Accept thì Matching logic lại Timeout
@@ -887,7 +844,7 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
                     polylines: [
                       Polyline(
                         points: _routePoints,
-                        strokeWidth: 5,
+                        strokeWidth: 8,
                         color: const Color(0xFF1976D2),
                       ),
                     ],

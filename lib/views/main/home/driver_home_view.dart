@@ -290,28 +290,40 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   );
                 },
                 onComplete: () async {
-                  final fare = _activeRide!.fare ?? 0;
+                  try {
+                    final rideId = _activeRide!.id;
+                    final fare = _activeRide!.fare ?? 0;
 
-                  // Chỉ cập nhật trip đã tồn tại (ongoing → completed)
-                  await _rideRepository.completeRide(_activeRide!.id, {
-                    'status': 'completed',
-                    'completedAt': Timestamp.fromDate(DateTime.now()),
-                    'fare': fare,
-                  });
+                    // Chỉ cập nhật trip đã tồn tại (ongoing → completed)
+                    await _rideRepository.completeRide(rideId, {
+                      'status': 'completed',
+                      'completedAt': Timestamp.fromDate(DateTime.now()),
+                      'fare': fare,
+                    });
 
-                  // Cộng tiền và tăng chuyến cho tài xế
-                  await _authController.completeRide(fare);
+                    // Cộng tiền và tăng chuyến cho tài xế
+                    await _authController.completeRide(fare);
 
-                  if (mounted) setState(() => _activeRide = null);
-                  // Khi xong chuyến, gán lại isAvailable = true
-                  _authController.updateUserStatus(isAvailable: true);
+                    if (mounted) setState(() => _activeRide = null);
+                    // Khi xong chuyến, gán lại isAvailable = true
+                    await _authController.updateUserStatus(isAvailable: true);
 
-                  Get.snackbar(
-                    'Hoàn thành',
-                    'Chuyến đi kết thúc. Bạn nhận được ${_formatVND(fare)}!',
-                    backgroundColor: Colors.blue,
-                    colorText: Colors.white,
-                  );
+                    Get.snackbar(
+                      'Hoàn thành',
+                      'Chuyến đi kết thúc. Bạn nhận được ${_formatVND(fare)}!',
+                      backgroundColor: Colors.blue,
+                      colorText: Colors.white,
+                    );
+                  } catch (e) {
+                    debugPrint('[DriverHomeScreen] completeRide error: $e');
+                    Get.snackbar(
+                      'Lỗi',
+                      'Không thể hoàn thành chuyến: $e',
+                      backgroundColor: Colors.red,
+                      colorText: Colors.white,
+                      duration: const Duration(seconds: 5),
+                    );
+                  }
                 },
               )
             else if (_currentRequest != null)

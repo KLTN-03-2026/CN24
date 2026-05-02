@@ -30,6 +30,7 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
   String? _distance;
   String? _duration;
   bool _isLoadingRoute = false;
+  bool _isFirstLoad = true;
 
   // Customer route (pickup → destination)
   List<LatLng> _customerRoutePoints = [];
@@ -155,8 +156,9 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
               _duration = durationStr;
             });
 
-            // Fit camera sau khi set state
-            if (points.length > 1) {
+            // Chỉ fit camera lần đầu tiên, sau đó để user tự do kéo map
+            if (_isFirstLoad && points.length > 1) {
+              _isFirstLoad = false;
               try {
                 final bounds = LatLngBounds.fromPoints(points);
                 _mapController.fitCamera(
@@ -329,14 +331,14 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
                     if (_routePoints.isNotEmpty && !_showCustomerRoute)
                       Polyline(
                         points: _routePoints,
-                        strokeWidth: 5,
+                        strokeWidth: 8,
                         color: const Color(0xFF223285),
                       ),
                     // Route customer (pickup → destination, màu cam)
                     if (_customerRoutePoints.isNotEmpty && _showCustomerRoute)
                       Polyline(
                         points: _customerRoutePoints,
-                        strokeWidth: 5,
+                        strokeWidth: 8,
                         color: const Color(0xFFE65100),
                       ),
                   ],

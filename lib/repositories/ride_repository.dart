@@ -269,22 +269,157 @@ class RideRepository {
     await _firestore.collection('trips').doc(trip.id).set(trip.toMap());
   }
 
-  // Hoàn thành chuyến xe, cập nhật trip đã tồn tại
+  // Hoàn thành chuyến xe, cập nhật trip đã tồn tại và tạo thông báo đánh giá
   Future<void> completeRide(
     String requestId,
     Map<String, dynamic> updateData,
   ) async {
     final WriteBatch batch = _firestore.batch();
 
-    // 1. Cập nhật trạng thái ride request
+    // 1. Lấy thông tin chuyến xe để biết customerId và driverId
+    final rideDoc = await _firestore.collection('ride_requests').doc(requestId).get();
+    if (!rideDoc.exists) {
+      debugPrint('[RideRepository] completeRide: ride request $requestId not found');
+      return;
+    }
+    
+    final rideData = rideDoc.data() as Map<String, dynamic>;
+    final customerId = rideData['customerId'] as String;
+    final driverId = rideData['driverId'] as String;
+    final driverName = rideData['driverName'] as String? ?? 'Tài xế';
+
+    debugPrint('[RideRepository] completeRide: Creating notification for customer $customerId');
+
+    // 2. Cập nhật trạng thái ride request
     batch.update(_firestore.collection('ride_requests').doc(requestId), {
       'status': RideStatus.completed.name,
     });
 
-    // 2. Cập nhật trip đã tồn tại (ongoing → completed)
-    batch.update(_firestore.collection('trips').doc(requestId), updateData);
+    // 3. Cập nhật hoặc tạo trip (dùng set merge để tránh lỗi NOT_FOUND nếu trip chưa tồn tại)
+    final tripRef = _firestore.collection('trips').doc(requestId);
+    final tripDoc = await tripRef.get();
+
+    if (tripDoc.exists) {
+      // Trip đã tồn tại → chỉ update
+      batch.update(tripRef, updateData);
+    } else {
+      // Trip chưa tồn tại → tạo mới từ dữ liệu ride_request
+      debugPrint('[RideRepository] completeRide: Trip chưa tồn tại, tạo mới từ ride_request');
+      final tripData = {
+        'id': requestId,
+        'customerId': customerId,
+        'customerName': rideData['customerName'] ?? '',
+        'driverId': driverId,
+        'driverName': driverName,
+        'pickupAddress': rideData['pickupAddress'] ?? '',
+        'pickupLatitude': rideData['pickupLatitude'] ?? 0.0,
+        'pickupLongitude': rideData['pickupLongitude'] ?? 0.0,
+        'destinationAddress': rideData['destinationAddress'] ?? '',
+        'destinationLatitude': rideData['destinationLatitude'] ?? 0.0,
+        'destinationLongitude': rideData['destinationLongitude'] ?? 0.0,
+        'fare': rideData['fare'] ?? 0,
+        'distance': rideData['distanceInKm'] ?? 0,
+        'paymentMethod': rideData['paymentMethod'] ?? 'Tiền mặt',
+        'createdAt': rideData['createdAt'] ?? Timestamp.fromDate(DateTime.now()),
+        ...updateData,
+      };
+      batch.set(tripRef, tripData);
+    }
+
+    // 4. Tạo thông báo đánh giá cho khách hàng
+    final notificationId = 'notif_$requestId';
+    batch.set(_firestore.collection('notifications').doc(notificationId), {
+      'id': notificationId,
+      'userId': customerId,
+      'rideId': requestId,
+      'driverId': driverId,
+      'driverName': driverName,
+      'title': 'Đánh giá chuyến đi',
+      'message': 'Chuyến đi cùng tài xế $driverName đã hoàn thành. Hãy chia sẻ trải nghiệm của bạn!',
+      'type': 'rating',
+      'isRated': false,
+      'isRead': false,
+      'createdAt': Timestamp.fromDate(DateTime.now()),
+    });
 
     await batch.commit();
+  }
+
+  // Gửi đánh giá tài xế
+  Future<void> submitRating({
+    required String rideId,
+    required String driverId,
+    required double rating,
+    required String feedback,
+    required String notificationId,
+  }) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // 1. ĐỌC: Lấy thông tin tài xế trước
+        final driverRef = _firestore.collection('users').doc(driverId);
+        final driverSnap = await transaction.get(driverRef);
+
+        // 2. GHI: Cập nhật Trip document
+        final tripRef = _firestore.collection('trips').doc(rideId);
+        transaction.update(tripRef, {
+          'rating': rating,
+          'feedback': feedback,
+        });
+
+        // 3. GHI: Cập nhật thống kê tài xế & Gửi thông báo cho tài xế
+        if (driverSnap.exists) {
+          final driverData = driverSnap.data() as Map<String, dynamic>;
+          
+          // Lấy rating hiện tại và số lượng đánh giá
+          final double currentRating = (driverData['rating'] as num?)?.toDouble() ?? 0.0;
+          
+          // Ưu tiên dùng ratingCount, nếu chưa có thì dùng totalTrips (nhưng phải đảm bảo ít nhất là 0)
+          int currentRatingCount = 0;
+          if (driverData.containsKey('ratingCount')) {
+            currentRatingCount = driverData['ratingCount'] as int? ?? 0;
+          } else {
+            // Nếu là lần đầu đánh giá, coi như chưa có ratingCount
+            currentRatingCount = 0; 
+          }
+
+          final int newRatingCount = currentRatingCount + 1;
+          
+          // Công thức tính trung bình cộng: ((Cũ * Số lượng cũ) + Mới) / Số lượng mới
+          final double newRating = ((currentRating * currentRatingCount) + rating) / newRatingCount;
+
+          transaction.update(driverRef, {
+            'rating': newRating,
+            'ratingCount': newRatingCount,
+          });
+
+          // 4. GHI: Tạo thông báo cho tài xế về đánh giá mới
+          final driverNotifId = 'notif_rating_$rideId';
+          final feedbackText = feedback.isNotEmpty 
+              ? '\nNhận xét: "$feedback"' 
+              : '';
+          transaction.set(_firestore.collection('notifications').doc(driverNotifId), {
+            'id': driverNotifId,
+            'userId': driverId,
+            'rideId': rideId,
+            'title': 'Bạn nhận được đánh giá ${rating.toStringAsFixed(1)} ⭐',
+            'message': 'Khách hàng đã đánh giá bạn ${rating.toStringAsFixed(1)} sao cho chuyến đi vừa rồi.$feedbackText',
+            'type': 'info',
+            'isRead': false,
+            'createdAt': Timestamp.fromDate(DateTime.now()),
+          });
+        }
+
+        // 5. GHI: Cập nhật thông báo của khách hàng đã hoàn thành
+        final notifRef = _firestore.collection('notifications').doc(notificationId);
+        transaction.update(notifRef, {
+          'isRated': true,
+          'isRead': true,
+        });
+      });
+    } catch (e) {
+      debugPrint('[RideRepository] submitRating error: $e');
+      rethrow;
+    }
   }
 
   // Lấy danh sách chuyến xe (history) của customer với filter
