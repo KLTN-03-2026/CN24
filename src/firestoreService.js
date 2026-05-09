@@ -329,6 +329,38 @@ export function onAllCustomers(callback, maxResults = 200) {
 }
 
 /**
+ * Realtime listener cho tất cả người dùng (Quản lý tài khoản)
+ */
+export function onAllUsers(callback, maxResults = 500) {
+  const q = query(
+    collection(db, 'users'),
+    limit(maxResults)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(users);
+  }, (error) => {
+    console.error('Realtime all users error:', error);
+  });
+}
+
+/**
+ * Cập nhật trạng thái tài khoản (Block/Unblock)
+ */
+export async function updateUserStatus(userId, isBlocked) {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      isBlocked: isBlocked,
+      updatedAt: new Date()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Đồng bộ lại số chuyến đi và thu nhập của tất cả tài xế
  */
 export async function syncDriverStats() {
@@ -581,15 +613,24 @@ export function onReviews(callback, maxResults = 100) {
   const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
     notifsData = snapshot.docs.map(doc => {
       const data = doc.data();
-      let rating = 5;
-      const titleMatch = data.title?.match(/(\d+(\.\d+)?)/);
-      const msgMatch = data.message?.match(/(\d+(\.\d+)?)\s*sao/);
-      if (titleMatch) rating = parseFloat(titleMatch[1]);
-      else if (msgMatch) rating = parseFloat(msgMatch[1]);
+      
+      // Ưu tiên lấy từ trường rating có sẵn, nếu không mới parse từ string
+      let rating = data.rating;
+      if (rating === undefined || rating === null) {
+        const titleMatch = data.title?.match(/(\d+(\.\d+)?)/);
+        const msgMatch = data.message?.match(/(\d+(\.\d+)?)\s*sao/);
+        if (titleMatch) rating = parseFloat(titleMatch[1]);
+        else if (msgMatch) rating = parseFloat(msgMatch[1]);
+        else rating = 5;
+      }
 
-      let comment = '';
-      const commentMatch = data.message?.match(/Nhận xét:\s*['"](.*)['"]/);
-      if (commentMatch) comment = commentMatch[1];
+      // Ưu tiên lấy từ trường comment có sẵn, nếu không mới parse từ message
+      let comment = data.comment;
+      if (comment === undefined || comment === null) {
+        const commentMatch = data.message?.match(/Nhận xét:\s*['"](.*)['"]/);
+        if (commentMatch) comment = commentMatch[1];
+        else comment = '';
+      }
 
       return {
         id: doc.id,
@@ -697,15 +738,24 @@ export function onDriverReviews(driverId, callback, maxResults = 50) {
   const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
     notifsData = snapshot.docs.map(doc => {
       const data = doc.data();
-      let rating = 5;
-      const titleMatch = data.title?.match(/(\d+(\.\d+)?)/);
-      const msgMatch = data.message?.match(/(\d+(\.\d+)?)\s*sao/);
-      if (titleMatch) rating = parseFloat(titleMatch[1]);
-      else if (msgMatch) rating = parseFloat(msgMatch[1]);
+      
+      // Ưu tiên lấy từ trường rating có sẵn, nếu không mới parse từ string
+      let rating = data.rating;
+      if (rating === undefined || rating === null) {
+        const titleMatch = data.title?.match(/(\d+(\.\d+)?)/);
+        const msgMatch = data.message?.match(/(\d+(\.\d+)?)\s*sao/);
+        if (titleMatch) rating = parseFloat(titleMatch[1]);
+        else if (msgMatch) rating = parseFloat(msgMatch[1]);
+        else rating = 5;
+      }
 
-      let comment = '';
-      const commentMatch = data.message?.match(/Nhận xét:\s*['"](.*)['"]/);
-      if (commentMatch) comment = commentMatch[1];
+      // Ưu tiên lấy từ trường comment có sẵn, nếu không mới parse từ message
+      let comment = data.comment;
+      if (comment === undefined || comment === null) {
+        const commentMatch = data.message?.match(/Nhận xét:\s*['"](.*)['"]/);
+        if (commentMatch) comment = commentMatch[1];
+        else comment = '';
+      }
 
       return {
         id: doc.id,

@@ -27,6 +27,7 @@ import MapPage from './pages/MapPage'
 import PaymentsPage from './pages/PaymentsPage'
 import ComplaintsPage from './pages/ComplaintsPage'
 import ReviewsPage from './pages/ReviewsPage'
+import AccountsPage from './pages/AccountsPage'
 import SettingsPage from './pages/SettingsPage'
 import ErrorBoundary from './components/ErrorBoundary'
 
@@ -202,6 +203,8 @@ function App() {
         return <ComplaintsPage />
       case 'nav-reviews':
         return <ReviewsPage />
+      case 'nav-accounts':
+        return <AccountsPage />
       case 'nav-settings':
         return <SettingsPage />
       case 'nav-dashboard':

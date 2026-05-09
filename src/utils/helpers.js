@@ -100,6 +100,7 @@ export const sidebarLinks = [
   { id: 'nav-rides', icon: 'car', label: 'Chuyến đi' },
   { id: 'nav-drivers', icon: 'driver', label: 'Tài xế' },
   { id: 'nav-customers', icon: 'users', label: 'Khách hàng' },
+  { id: 'nav-accounts', icon: 'account', label: 'Tài khoản' },
   { id: 'nav-map', icon: 'map', label: 'Bản đồ' },
   { section: 'Tài chính' },
   { id: 'nav-payments', icon: 'wallet', label: 'Thanh toán' },
