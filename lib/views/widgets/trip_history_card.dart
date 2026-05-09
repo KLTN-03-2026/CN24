@@ -17,16 +17,19 @@ class TripHistoryCard extends StatelessWidget {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
     final fareFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'VND');
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -47,7 +50,7 @@ class TripHistoryCard extends StatelessWidget {
                       Text(
                         dateFormat.format(trip.completedAt ?? trip.createdAt),
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: theme.colorScheme.onSurfaceVariant,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -78,10 +81,10 @@ class TripHistoryCard extends StatelessWidget {
                       children: [
                         Text(
                           trip.pickupAddress,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1A1A1A),
+                            color: theme.colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -89,10 +92,10 @@ class TripHistoryCard extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           trip.destinationAddress,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1A1A1A),
+                            color: theme.colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -115,21 +118,21 @@ class TripHistoryCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _buildInfoChip(Icons.route, '${trip.distance.toStringAsFixed(1)} km'),
+                      _buildInfoChip(context, Icons.route, '${trip.distance.toStringAsFixed(1)} km'),
                       const SizedBox(width: 8),
-                      _buildInfoChip(Icons.payments_outlined, trip.paymentMethod),
+                      _buildInfoChip(context, Icons.payments_outlined, trip.paymentMethod),
                       if (trip.rating != null) ...[
                         const SizedBox(width: 8),
-                        _buildInfoChip(Icons.star, '${trip.rating}', iconColor: Colors.amber),
+                        _buildInfoChip(context, Icons.star, '${trip.rating}', iconColor: Colors.amber),
                       ],
                     ],
                   ),
                   Text(
                     fareFormat.format(trip.fare),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF223285),
+                      color: theme.primaryColor,
                     ),
                   ),
                 ],
@@ -184,21 +187,24 @@ class TripHistoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label, {Color? iconColor}) {
+  Widget _buildInfoChip(BuildContext context, IconData icon, String label, {Color? iconColor}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: isDark ? theme.primaryColor.withValues(alpha: 0.1) : theme.scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[100]!),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: iconColor ?? Colors.grey[500]),
+          Icon(icon, size: 14, color: iconColor ?? theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: Colors.grey[600], fontSize: 11),
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
           ),
         ],
       ),

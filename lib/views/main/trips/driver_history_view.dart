@@ -24,6 +24,8 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final userId = _authController.userModel?.id ?? '';
     final currencyFormat = NumberFormat.currency(
       locale: 'vi_VN',
@@ -31,15 +33,14 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Lịch sử thu thập',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          'trip_history'.tr,
+          style: theme.appBarTheme.titleTextStyle,
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        foregroundColor: Colors.black,
       ),
       body: StreamBuilder<List<TripModel>>(
         stream: _rideRepository.watchTripsForDriver(
@@ -66,14 +67,7 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
 
           final allTrips = snapshot.data ?? [];
 
-          final completedTrips = allTrips
-              .where((t) => t.status.toLowerCase() == 'completed')
-              .toList();
-          final totalEarnings = completedTrips.fold<double>(
-            0,
-            (sum, t) => sum + t.fare,
-          );
-          final tripCount = completedTrips.length;
+          // Stats are now read directly from AuthController (userModel) inside Obx
 
           // Filter list for display
           final filteredTrips = _selectedFilter == 'Tất cả'
@@ -89,26 +83,32 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
           return Column(
             children: [
               // Stats Row
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    _buildStatCard(
-                      'Số chuyến',
-                      '$tripCount',
-                      Icons.directions_car,
-                      Colors.blue,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      'Thu nhập',
-                      currencyFormat.format(totalEarnings),
-                      Icons.account_balance_wallet,
-                      Colors.green,
-                    ),
-                  ],
-                ),
-              ),
+              Obx(() {
+                final user = _authController.userModel;
+                final tripCount = user?.totalTrips ?? 0;
+                final totalEarnings = user?.earnings ?? 0.0;
+
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      _buildStatCard(
+                        'Số chuyến',
+                        '$tripCount',
+                        Icons.directions_car,
+                        Colors.blue,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildStatCard(
+                        'Thu nhập',
+                        currencyFormat.format(totalEarnings),
+                        Icons.account_balance_wallet,
+                        Colors.green,
+                      ),
+                    ],
+                  ),
+                );
+              }),
 
               // Filter Row
               Container(
@@ -120,33 +120,33 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
                   itemBuilder: (context, index) {
                     final filter = _filters[index];
                     final isSelected = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(filter),
-                        selected: isSelected,
-                        onSelected: (val) =>
-                            setState(() => _selectedFilter = filter),
-                        backgroundColor: Colors.white,
-                        selectedColor: const Color(0xFF223285).withOpacity(0.1),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? const Color(0xFF223285)
-                              : Colors.grey[600],
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                        shape: StadiumBorder(
-                          side: BorderSide(
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(filter.tr),
+                          selected: isSelected,
+                          onSelected: (val) =>
+                              setState(() => _selectedFilter = filter),
+                          backgroundColor: theme.cardColor,
+                          selectedColor: theme.primaryColor.withOpacity(0.1),
+                          labelStyle: TextStyle(
                             color: isSelected
-                                ? const Color(0xFF223285)
-                                : Colors.grey[200]!,
+                                ? theme.primaryColor
+                                : theme.colorScheme.onSurfaceVariant,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
+                          shape: StadiumBorder(
+                            side: BorderSide(
+                              color: isSelected
+                                  ? theme.primaryColor
+                                  : theme.dividerColor.withOpacity(0.1),
+                            ),
+                          ),
+                          showCheckmark: false,
                         ),
-                        showCheckmark: false,
-                      ),
-                    );
+                      );
                   },
                 ),
               ),
@@ -199,15 +199,18 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     IconData icon,
     Color color,
   ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -227,16 +230,16 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
             const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 4),
             FittedBox(
               child: Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ),

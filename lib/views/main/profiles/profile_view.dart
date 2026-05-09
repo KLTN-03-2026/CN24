@@ -1,9 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ride_now_khoaluan/controllers/auth_controller.dart';
 import 'package:ride_now_khoaluan/models/user_model.dart';
-import 'package:ride_now_khoaluan/routes/app_routes.dart';
-import 'package:ride_now_khoaluan/views/main/profiles/driver_vehicle_screen.dart';
+
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -14,82 +15,118 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   final AuthController _authController = Get.find<AuthController>();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
 
+  String? _nameError;
   String? _phoneError;
-  bool _isEditingPhone = false;
-  bool _isSavingPhone = false;
+  bool _isEditing = false;
+  bool _isSaving = false;
 
-  static const _primary = Color(0xFF1C64F2); // Vibrant blue matching image
-  static const _bg = Color(0xFFF8FAFC);
-  static const _textDark = Color(0xFF0F172A);
-  static const _textSoft = Color(0xFF64748B);
+  late Worker _userModelWorker;
 
   @override
   void initState() {
     super.initState();
+    // Set giá trị ban đầu nếu userModel đã sẵn sàng
+    _nameController.text = _authController.userModel?.name ?? '';
     _phoneController.text = _authController.userModel?.phone ?? '';
+
+    // Lắng nghe thay đổi userModel từ Firestore stream
+    // để cập nhật khi dữ liệu được load bất đồng bộ
+    _userModelWorker = ever(_authController.userModelRx, (userModel) {
+      if (!_isEditing && userModel != null) {
+        final newName = userModel.name;
+        final newPhone = userModel.phone ?? '';
+        if (_nameController.text != newName) {
+          _nameController.text = newName;
+        }
+        if (_phoneController.text != newPhone) {
+          _phoneController.text = newPhone;
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _userModelWorker.dispose();
+    _nameController.dispose();
     _phoneController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
-  void _savePhone() async {
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 50,
+    );
+
+    if (image != null) {
+      _authController.updateAvatar(File(image.path));
+    }
+  }
+
+  void _saveProfile() async {
+    final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
 
     // Validation
+    bool hasError = false;
+    if (name.isEmpty) {
+      setState(() => _nameError = 'name_empty_error'.tr);
+      hasError = true;
+    } else {
+      setState(() => _nameError = null);
+    }
+
     if (phone.isEmpty) {
-      setState(() => _phoneError = 'Phone number cannot be empty');
-      return;
+      setState(() => _phoneError = 'phone_empty_error'.tr);
+      hasError = true;
+    } else if (!RegExp(r'^\+?[0-9\s]{9,15}$').hasMatch(phone)) {
+      setState(() => _phoneError = 'phone_invalid_error'.tr);
+      hasError = true;
+    } else {
+      setState(() => _phoneError = null);
     }
-    if (!RegExp(r'^\+?[0-9\s]{9,15}$').hasMatch(phone)) {
-      setState(() => _phoneError = 'Invalid phone number format');
-      return;
-    }
+
+    if (hasError) return;
 
     setState(() {
-      _phoneError = null;
-      _isEditingPhone = false;
-      _isSavingPhone = true;
+      _isEditing = false;
+      _isSaving = true;
     });
 
-    await _authController.updateUserPhone(phone);
+    await _authController.updateProfile(name: name, phone: phone);
 
     if (mounted) {
-      setState(() => _isSavingPhone = false);
+      setState(() => _isSaving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: _textDark,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+        title: Text(
+          'profile'.tr,
+          style: theme.appBarTheme.titleTextStyle,
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: _primary),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Obx(() {
         final user = _authController.userModel;
         if (user == null) {
-          return const Center(child: Text('Not logged in'));
+          return const Center(child: Text('Chưa đăng nhập'));
         }
 
         return SingleChildScrollView(
@@ -98,52 +135,75 @@ class _ProfileViewState extends State<ProfileView> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // --- AVATAR & INFO HEADER ---
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      color: Colors.blue.shade50,
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/05/anh-cho-hai-1.jpg',
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                        color: Colors.blue.shade50,
+                        image: DecorationImage(
+                          image: NetworkImage(
+                            user.avatar ??
+                                'https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/05/anh-cho-hai-1.jpg',
+                          ),
+                          fit: BoxFit.cover,
                         ),
-                        fit: BoxFit.cover,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: _primary,
-                      shape: BoxShape.circle,
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.edit,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
 
-              Text(
-                user.name,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: _textDark,
+              GestureDetector(
+                onTap: () {
+                  _nameFocusNode.requestFocus();
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ValueListenableBuilder(
+                      valueListenable: _nameController,
+                      builder: (context, value, child) {
+                        return Text(
+                          _nameController.text.isEmpty
+                              ? 'no_name'.tr
+                              : _nameController.text,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.edit, size: 18, color: theme.primaryColor),
+                  ],
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 user.email,
-                style: const TextStyle(fontSize: 15, color: _textSoft),
+                style: TextStyle(fontSize: 15, color: theme.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 10),
 
@@ -167,7 +227,7 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Verified',
+                      'verified'.tr,
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontSize: 12,
@@ -181,15 +241,15 @@ class _ProfileViewState extends State<ProfileView> {
               const SizedBox(height: 30),
 
               // --- PERSONAL INFORMATION SECTION ---
-              _buildSectionTitle('PERSONAL INFORMATION'),
+              _buildSectionTitle(context, 'account_settings'.tr),
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -198,29 +258,27 @@ class _ProfileViewState extends State<ProfileView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Phone Number',
+                    Text(
+                      'full_name'.tr,
                       style: TextStyle(
-                        color: _textDark,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
+                      controller: _nameController,
+                      focusNode: _nameFocusNode,
                       onChanged: (val) {
-                        if (!_isEditingPhone)
-                          setState(() => _isEditingPhone = true);
-                        if (_phoneError != null)
-                          setState(() => _phoneError = null);
+                        if (!_isEditing) setState(() => _isEditing = true);
+                        if (_nameError != null) setState(() => _nameError = null);
                       },
                       decoration: InputDecoration(
-                        hintText: 'Enter your phone number',
+                        hintText: 'enter_name'.tr,
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
-                        fillColor: const Color(0xFFF1F5F9),
+                        fillColor: isDark ? theme.scaffoldBackgroundColor : const Color(0xFFF1F5F9),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
@@ -231,8 +289,63 @@ class _ProfileViewState extends State<ProfileView> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: _primary,
+                          borderSide: BorderSide(
+                            color: theme.primaryColor,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_nameError != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.error, color: Colors.red, size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            _nameError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    Text(
+                      'phone_number'.tr,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      onChanged: (val) {
+                        if (!_isEditing) setState(() => _isEditing = true);
+                        if (_phoneError != null) setState(() => _phoneError = null);
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'enter_phone'.tr,
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: isDark ? theme.scaffoldBackgroundColor : const Color(0xFFF1F5F9),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: theme.primaryColor,
                             width: 1.5,
                           ),
                         ),
@@ -259,23 +372,18 @@ class _ProfileViewState extends State<ProfileView> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed:
-                            (_isEditingPhone ||
-                                    _phoneController.text.isEmpty) &&
-                                !_isSavingPhone
-                            ? _savePhone
-                            : null,
+                        onPressed: _isEditing && !_isSaving ? _saveProfile : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _primary,
+                          backgroundColor: theme.primaryColor,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          disabledBackgroundColor: _primary.withOpacity(0.6),
+                          disabledBackgroundColor: theme.primaryColor.withOpacity(0.6),
                           disabledForegroundColor: Colors.white,
                         ),
-                        child: _isSavingPhone
+                        child: _isSaving
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
@@ -284,9 +392,9 @@ class _ProfileViewState extends State<ProfileView> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'Save Changes',
-                                style: TextStyle(
+                            : Text(
+                                'save_changes'.tr,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -297,151 +405,30 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              // --- ACCOUNT SETTINGS SECTION ---
-              _buildSectionTitle('ACCOUNT SETTINGS'),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Mục "Thông tin xe" — chỉ hiển thị cho Driver
-                    if (user.role == UserRole.driver) ...[
-                      _buildSettingsItem(
-                        icon: Icons.directions_car,
-                        title: 'Thông tin xe',
-                        onTap: () => Get.to(() => const DriverVehicleScreen()),
-                      ),
-                      _buildDivider(),
-                    ],
-                    _buildSettingsItem(
-                      icon: Icons.lock_outline,
-                      title: 'Change Password',
-                      onTap: () => Get.toNamed(AppRoutes.changePassword),
-                    ),
-                    _buildDivider(),
-                    _buildSettingsItem(
-                      icon: Icons.payments_outlined,
-                      title: 'Payment Methods',
-                      onTap: () {},
-                    ),
-                    _buildDivider(),
-                    _buildSettingsItem(
-                      icon: Icons.history,
-                      title: 'Ride History',
-                      onTap: () {},
-                    ),
-                    _buildDivider(),
-                    _buildSettingsItem(
-                      icon: Icons.help_outline,
-                      title: 'Support',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // --- LOGOUT BUTTON ---
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _authController.logOut();
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFEF2F2),
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 40),
             ],
           ),
         );
       }),
+
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 12),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
           title,
-          style: const TextStyle(
-            color: _textSoft,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSettingsItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: _primary, size: 20),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: _textDark,
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-        ),
-      ),
-      trailing: const Icon(
-        Icons.arrow_forward_ios,
-        size: 14,
-        color: Colors.grey,
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 60, right: 20),
-      child: Divider(height: 1, color: Colors.grey.shade100),
     );
   }
 }

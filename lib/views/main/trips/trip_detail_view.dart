@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/trip_model.dart';
+import 'submit_complaint_view.dart';
 
 class TripDetailScreen extends StatelessWidget {
   final TripModel trip;
@@ -140,6 +142,32 @@ class TripDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Get.to(() => SubmitComplaintView(trip: trip));
+                      },
+                      icon: const Icon(Icons.report_problem_outlined, color: Colors.red),
+                      label: const Text(
+                        'Báo cáo / Khiếu nại',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.red.shade200),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.red.shade50,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 40),
                 ],

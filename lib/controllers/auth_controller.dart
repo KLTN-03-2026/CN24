@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
+import 'package:ride_now_khoaluan/services/storage_service.dart';
 
 import '../models/user_model.dart';
 import '../routes/app_routes.dart';
@@ -11,6 +14,7 @@ import '../services/location_service.dart';
 class AuthController extends GetxController {
   final AuthService _authService = AuthService();
   final LocationService _locationService = LocationService();
+  final StorageService _storageService = StorageService();
 
   final Rx<User?> _user = Rx<User?>(null);
   final Rx<UserModel?> userModelRx = Rx<UserModel?>(null);
@@ -40,6 +44,13 @@ class AuthController extends GetxController {
     super.onInit();
     _user.bindStream(_authService.authStateChanges);
     ever<User?>(_user, _handleAuthStateChange);
+    
+    // Áp dụng ngôn ngữ và giao diện mỗi khi dữ liệu User thay đổi
+    ever<UserModel?>(userModelRx, (model) {
+      if (model != null) {
+        _applyUserSettings(model);
+      }
+    });
   }
 
   Future<void> _handleAuthStateChange(User? user) async {
@@ -206,18 +217,48 @@ class AuthController extends GetxController {
     );
   }
 
-  Future<void> updateUserPhone(String phone) async {
+  Future<void> updateProfile({String? name, String? phone}) async {
     if (userModelRx.value == null) return;
 
     _isLoading.value = true;
     try {
-      final updatedModel = userModelRx.value!.copyWith(phone: phone);
+      final updatedModel = userModelRx.value!.copyWith(
+        name: name ?? userModelRx.value!.name,
+        phone: phone ?? userModelRx.value!.phone,
+      );
 
       await _authService.updateUserModel(updatedModel);
       userModelRx.value = updatedModel;
-      Get.snackbar('Thành công', 'Đã cập nhật số điện thoại.');
+      Get.snackbar('Thành công', 'Đã cập nhật thông tin cá nhân.');
     } catch (e) {
-      Get.snackbar('Lỗi', 'Không thể cập nhật số điện thoại: $e');
+      Get.snackbar('Lỗi', 'Không thể cập nhật thông tin: $e');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  Future<void> updateUserPhone(String phone) async {
+    await updateProfile(phone: phone);
+  }
+
+  Future<void> updateAvatar(File imageFile) async {
+    if (userModelRx.value == null) return;
+
+    _isLoading.value = true;
+    try {
+      final String downloadUrl = await _storageService.uploadUserAvatar(
+        userId: userModelRx.value!.id,
+        imageFile: imageFile,
+      );
+
+      final updatedModel = userModelRx.value!.copyWith(avatar: downloadUrl);
+      await _authService.updateUserModel(updatedModel);
+      userModelRx.value = updatedModel;
+
+      Get.snackbar('Thành công', 'Đã cập nhật ảnh đại diện.');
+    } catch (e) {
+      debugPrint('[AuthController] updateAvatar error: $e');
+      Get.snackbar('Lỗi', 'Không thể cập nhật ảnh đại diện.');
     } finally {
       _isLoading.value = false;
     }
@@ -263,6 +304,45 @@ class AuthController extends GetxController {
     } finally {
       _isAuthenticating = false; // Luôn mở lại
       _isLoading.value = false;
+    }
+  }
+
+  /// Áp dụng các cài đặt về ngôn ngữ và theme từ UserModel vào hệ thống GetX
+  void _applyUserSettings(UserModel model) {
+    // 1. Áp dụng ngôn ngữ
+    if (model.language != null) {
+      final currentLocale = Get.locale?.languageCode;
+      if (currentLocale != model.language) {
+        Get.updateLocale(Locale(model.language!));
+      }
+    }
+
+    // 2. Áp dụng theme
+    if (model.theme != null) {
+      final isDark = model.theme == 'dark';
+      if (Get.isDarkMode != isDark) {
+        Get.changeThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+      }
+    }
+  }
+
+  /// Cập nhật cài đặt ngôn ngữ/theme lên Firestore
+  Future<void> updateAppSettings({String? language, String? theme}) async {
+    if (userModelRx.value == null) return;
+
+    try {
+      final updatedModel = userModelRx.value!.copyWith(
+        language: language ?? userModelRx.value!.language,
+        theme: theme ?? userModelRx.value!.theme,
+      );
+
+      // Cập nhật Firestore
+      await _authService.updateUserModel(updatedModel);
+      
+      // Update local (worker sẽ tự động apply thông qua ever)
+      userModelRx.value = updatedModel;
+    } catch (e) {
+      debugPrint('[AuthController] updateAppSettings error: $e');
     }
   }
 }

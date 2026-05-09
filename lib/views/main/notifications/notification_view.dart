@@ -18,14 +18,17 @@ class _NotificationViewState extends State<NotificationView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F8),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        title: const Text(
-          'Thông báo',
-          style: TextStyle(color: Color(0xFF223285), fontWeight: FontWeight.bold),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        title: Text(
+          'notifications'.tr,
+          style: theme.appBarTheme.titleTextStyle,
         ),
         centerTitle: true,
       ),
@@ -72,16 +75,20 @@ class _NotificationViewState extends State<NotificationView> {
   }
 
   Widget _buildNotificationCard(NotificationModel notif) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     bool isRating = notif.type == NotificationType.rating;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: notif.isRead ? Colors.white : const Color(0xFFEDF4FE),
+        color: notif.isRead 
+            ? theme.cardColor 
+            : (isDark ? theme.primaryColor.withOpacity(0.1) : const Color(0xFFEDF4FE)),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -109,7 +116,9 @@ class _NotificationViewState extends State<NotificationView> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isRating ? Colors.orange.shade50 : Colors.blue.shade50,
+                        color: isRating 
+                            ? (isDark ? Colors.orange.withOpacity(0.1) : Colors.orange.shade50) 
+                            : (isDark ? Colors.blue.withOpacity(0.1) : Colors.blue.shade50),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -128,13 +137,16 @@ class _NotificationViewState extends State<NotificationView> {
                             style: TextStyle(
                               fontWeight: notif.isRead ? FontWeight.w600 : FontWeight.w800,
                               fontSize: 15,
-                              color: const Color(0xFF1F2937),
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             _formatDateTime(notif.createdAt),
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                            style: TextStyle(
+                              fontSize: 11, 
+                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                            ),
                           ),
                         ],
                       ),
@@ -143,14 +155,21 @@ class _NotificationViewState extends State<NotificationView> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor, 
+                          shape: BoxShape.circle,
+                        ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Text(
                   notif.message,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563), height: 1.4),
+                  style: TextStyle(
+                    fontSize: 14, 
+                    color: theme.colorScheme.onSurfaceVariant, 
+                    height: 1.4,
+                  ),
                 ),
                 if (isRating) ...[
                   const SizedBox(height: 16),

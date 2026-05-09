@@ -134,16 +134,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     print('DEBUG: [DriverHomeScreen] Build: _activeRide=${_activeRide?.id}, _currentRequest=${_currentRequest?.id}');
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F8),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF3F5F8),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Ride Now',
           style: TextStyle(
-            color: Color(0xFF223285),
+            color: theme.primaryColor,
             fontWeight: FontWeight.w800,
             fontSize: 22,
           ),
@@ -154,7 +157,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             child: GestureDetector(
               onTap: () => Get.to(() => const ProfileView()),
               child: CircleAvatar(
-                backgroundColor: const Color(0xFF3b5998),
+                backgroundColor: theme.primaryColor,
                 radius: 18,
                 child: const Icon(Icons.person, color: Colors.white, size: 20),
               ),
@@ -172,11 +175,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -198,10 +201,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         const SizedBox(width: 8),
                         Text(
                           isOnline ? 'Online' : 'Offline',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF374151),
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -223,10 +226,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               height: 180,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFEDF4FE),
+                color: isDark ? theme.primaryColor.withOpacity(0.05) : const Color(0xFFEDF4FE),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.blue.withOpacity(0.5),
+                  color: theme.primaryColor.withOpacity(0.3),
                   width: 1,
                   style: BorderStyle.solid,
                 ),
@@ -475,15 +478,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _buildStatCard(String title, String value, Color color) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -493,8 +499,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,

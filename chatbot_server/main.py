@@ -2,53 +2,44 @@ import json
 import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# Trạng thái của Chatbot (Mặc định là đang bật, nhưng ta có thể tuỳ chỉnh)
-# Theo yêu cầu: nhắn "thoát" thì dừng, nhắn "bắt đầu" thì chạy lại.
-chat_active = True 
-
+# Bộ quy tắc phản hồi (Rule-based) cho RideNow
 def get_intent_response(text: str) -> str:
-    global chat_active
     text = text.lower().strip()
     
-    # Logic Bật/Tắt Chatbot
-    if text == 'thoát' or text == 'thoat':
-        chat_active = False
-        return "🛑 Chatbot đã được tắt. File main.py tạm dừng nhận lệnh. (Nhắn 'bắt đầu' để khởi động lại)."
+    # 1. Chào hỏi
+    if re.search(r'(chào|hello|hi|xin chào|hey)', text):
+        return "👋 Xin chào! Tôi là RideNow Assistant. Tôi có thể giúp bạn các vấn đề về: Đặt xe, Giá cước, Hủy chuyến, Thanh toán, Khiếu nại và An toàn. Bạn cần hỗ trợ gì?"
         
-    if not chat_active:
-        if text == 'bắt đầu' or text == 'bat dau':
-            chat_active = True
-            return "✅ Chatbot đã khởi động lại! Xin chào, tôi là RideNow Assistant. Tôi có thể giúp gì cho bạn?"
-        else:
-            return "💤 Chatbot đang trong trạng thái tắt. Vui lòng nhắn 'bắt đầu' để khởi động lại."
-
-    # --- CÁC LOGIC CHATBOT BÌNH THƯỜNG BÊN DƯỚI (Chỉ chạy khi chat_active = True) ---
-    
-    if re.search(r'(đặt xe|gọi xe|book|bắt xe)', text):
-        return "🚗 **Hướng dẫn đặt xe:**\n1. Mở app RideNow\n2. Chọn điểm đón và điểm đến\n3. Xem giá cước và bấm 'Đặt xe'\n4. Tài xế gần nhất sẽ đến đón bạn ngay!"
+    # 2. Đặt xe
+    if re.search(r'(đặt xe|gọi xe|book|bắt xe|làm sao để đi)', text):
+        return "🚗 **Hướng dẫn đặt xe:**\n1. Nhập điểm đón và điểm đến trên màn hình chính.\n2. Hệ thống sẽ tính giá cước dự kiến.\n3. Nhấn 'Đặt xe' để tìm tài xế gần nhất.\n\nBạn đã thử nhập địa chỉ chưa?"
         
-    if re.search(r'(giá|cước|bao nhiêu|tiền|phí)', text):
-        return "💰 **Giá cước RideNow:**\n- 5.000đ cho mỗi km.\n- Phí tối thiểu cho mỗi chuyến là 15.000đ.\n- Giá hiển thị trên app là giá cuối cùng, không phụ thu!"
+    # 3. Giá cước
+    if re.search(r'(giá|cước|bao nhiêu|tiền|phí|đắt)', text):
+        return "💰 **Giá cước RideNow:**\n- 5.000đ cho mỗi km.\n- Phí tối thiểu: 15.000đ/chuyến.\n- Giá hiển thị trên app là giá cuối cùng, cam kết không thu thêm phụ phí!"
         
-    if re.search(r'(hủy|huy chuyen|không đi nữa|hông di nữa| làm sao để huy chuyển)', text):
-        return "❌ **Quy định hủy chuyến:**\nBạn có thể hủy chuyến miễn phí trước khi tài xế đến điểm đón. Lưu ý: Hủy chuyến quá nhiều lần có thể bị hạn chế tài khoản để đảm bảo quyền lợi cho tài xế."
+    # 4. Hủy chuyến
+    if re.search(r'(hủy|không đi nữa|đổi ý|huy chuyen)', text):
+        return "❌ **Quy định hủy chuyến:**\nBạn có thể hủy chuyến miễn phí trước khi tài xế đến điểm đón. Lưu ý: Tránh hủy chuyến liên tục để không bị hạn chế tài khoản nhé."
         
-    if re.search(r'(thanh toán|trả tiền|tiền mặt|chuyển khoản)', text):
-        return "💳 **Thanh toán:**\nHiện tại RideNow hỗ trợ thanh toán bằng **Tiền mặt**. Bạn vui lòng thanh toán trực tiếp cho tài xế sau khi chuyến đi kết thúc nhé."
+    # 5. Thanh toán
+    if re.search(r'(thanh toán|trả tiền|tiền mặt|chuyển khoản|thanh toan)', text):
+        return "💳 **Thanh toán:**\nHiện tại RideNow hỗ trợ thanh toán bằng **Tiền mặt**. Bạn vui lòng trả trực tiếp cho tài xế sau khi kết thúc hành trình."
         
-    if re.search(r'(khiếu nại|thái độ|đi ẩu|tài xế tệ|report)', text):
-        return "🚨 **Khiếu nại:**\nRideNow rất tiếc nếu bạn có trải nghiệm không tốt. Để khiếu nại, bạn có thể:\n1. Đánh giá 1 sao sau chuyến đi và để lại nhận xét.\n2. Gọi hotline hỗ trợ 24/7: **1900-xxxx**."
+    # 6. Khiếu nại / Thái độ
+    if re.search(r'(khiếu nại|thái độ|đi ẩu|tài xế tệ|report|không hài lòng)', text):
+        return "🚨 **Hỗ trợ khiếu nại:**\nChúng tôi rất tiếc về trải nghiệm này. Bạn có thể:\n1. Đánh giá sao và để lại bình luận sau chuyến đi.\n2. Liên hệ hotline hỗ trợ: **1900-xxxx** để được xử lý ngay."
         
-    if re.search(r'(tài khoản|mật khẩu|đăng nhập|đăng ký|quên pass)', text):
-        return "👤 **Hỗ trợ Tài khoản:**\n- Đăng ký: Bằng email.\n- Quên mật khẩu: Chọn 'Quên mật khẩu' ở màn hình đăng nhập.\n- Chỉnh sửa thông tin: Vào mục 'Hồ sơ' trong app."
-        
+    # 7. An toàn
     if re.search(r'(an toàn|bảo hiểm|mũ bảo hiểm|tai nạn|an toan)', text):
-        return "🛡️ **Quy định an toàn:**\n- Vui lòng luôn đội mũ bảo hiểm khi lên xe.\n- Kiểm tra đúng biển số xe và tài xế trước khi đi.\n- Tất cả tài xế RideNow đều có bằng lái và bảo hiểm hợp lệ."
+        return "🛡️ **Quy định an toàn:**\n- Luôn đội mũ bảo hiểm khi ngồi trên xe.\n- Kiểm tra biển số xe và ảnh tài xế trước khi lên xe.\n- Chia sẻ hành trình cho người thân nếu cần thiết."
         
-    if re.search(r'(chào|hello|hi|xin chào|xin chao)', text):
-        return "👋 Xin chào! Tôi là RideNow Assistant. Tôi có thể giúp bạn các vấn đề về: Đặt xe, Giá cước, Hủy chuyến, Thanh toán, Khiếu nại, Tài khoản và An toàn. Bạn cần hỗ trợ gì?"
+    # 8. Tài khoản
+    if re.search(r'(tài khoản|mật khẩu|đăng ký|quên pass|thông tin)', text):
+        return "👤 **Hỗ trợ tài khoản:**\n- Bạn có thể chỉnh sửa thông tin trong mục 'Hồ sơ'.\n- Nếu quên mật khẩu, hãy dùng chức năng 'Quên mật khẩu' tại màn hình đăng nhập."
 
-    return "🤔 Xin lỗi, tôi chưa hiểu ý bạn lắm. Bạn có thể hỏi rõ hơn về các chủ đề: đặt xe, giá cước, thanh toán, hủy chuyến, khiếu nại, tài khoản, hoặc an toàn không?"
+    # Mặc định khi không hiểu
+    return "🤔 Xin lỗi, tôi chưa hiểu rõ ý bạn. Bạn có thể hỏi về: Cách đặt xe, Giá cước, Hủy chuyến, Thanh toán hoặc Khiếu nại không?"
 
 class ChatbotHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status_code=200):
@@ -65,7 +56,7 @@ class ChatbotHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self._set_headers()
-            response = {"message": "RideNow Chatbot Server is running!"}
+            response = {"message": "RideNow Rule-based Chatbot Server is running!"}
             self.wfile.write(json.dumps(response).encode('utf-8'))
         else:
             self.send_response(404)
@@ -79,6 +70,7 @@ class ChatbotHandler(BaseHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 user_message = data.get('message', '')
                 
+                # Lấy phản hồi từ bộ quy tắc
                 reply = get_intent_response(user_message)
                 
                 self._set_headers()
@@ -92,10 +84,8 @@ class ChatbotHandler(BaseHTTPRequestHandler):
                 response = {"error": str(e)}
                 self.wfile.write(json.dumps(response).encode('utf-8'))
         elif self.path == '/api/reset':
-            global chat_active
-            chat_active = True
             self._set_headers()
-            response = {"status": "success", "message": "Chatbot reset and active"}
+            response = {"status": "success", "message": "Chatbot reset"}
             self.wfile.write(json.dumps(response).encode('utf-8'))
         else:
             self.send_response(404)
@@ -104,7 +94,7 @@ class ChatbotHandler(BaseHTTPRequestHandler):
 def run(server_class=HTTPServer, handler_class=ChatbotHandler, port=8000):
     server_address = ('0.0.0.0', port)
     httpd = server_class(server_address, handler_class)
-    print(f'Starting httpd server on port {port}...')
+    print(f'Starting RideNow Rule-based Server on port {port}...')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

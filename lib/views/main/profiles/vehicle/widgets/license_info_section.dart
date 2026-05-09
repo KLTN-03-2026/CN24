@@ -5,11 +5,11 @@ import 'package:ride_now_khoaluan/controllers/vehicle_profile_controller.dart';
 import 'image_upload_field.dart';
 import 'section_header.dart';
 
-/// Section thông tin tài xế: Họ tên, SĐT, Avatar, GPLX, CCCD
-class DriverInfoSection extends StatelessWidget {
+/// Section thông tin bằng lái xe: Số GPLX, Hết hạn, Ảnh GPLX
+class LicenseInfoSection extends StatelessWidget {
   final VehicleProfileController controller;
 
-  const DriverInfoSection({super.key, required this.controller});
+  const LicenseInfoSection({super.key, required this.controller});
 
   static const _primary = Color(0xFF1C64F2);
   static const _textDark = Color(0xFF0F172A);
@@ -17,17 +17,17 @@ class DriverInfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final isEditing = controller.isEditingDriverInfo.value;
+      final isEditing = controller.isEditingLicenseInfo.value;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionHeader(
-            title: 'THÔNG TIN TÀI XẾ',
-            icon: Icons.person_outline,
+            title: 'GIẤY PHÉP LÁI XE',
+            icon: Icons.badge_outlined,
             isEditing: isEditing,
             onToggleEdit: () =>
-                controller.isEditingDriverInfo.value = !isEditing,
+                controller.isEditingLicenseInfo.value = !isEditing,
           ),
           Container(
             padding: const EdgeInsets.all(20),
@@ -45,35 +45,26 @@ class DriverInfoSection extends StatelessWidget {
             child: Column(
               children: [
                 _buildTextField(
-                  label: 'Họ và tên',
-                  value: controller.fullName.value,
-                  onChanged: (v) => controller.fullName.value = v,
+                  label: 'Số GPLX',
+                  value: controller.driverLicenseNumber.value,
+                  onChanged: (v) => controller.driverLicenseNumber.value = v,
                   enabled: isEditing,
-                  icon: Icons.badge_outlined,
+                  icon: Icons.credit_card_outlined,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
-                  label: 'Số điện thoại',
-                  value: controller.phoneNumber.value,
-                  onChanged: (v) => controller.phoneNumber.value = v,
+                  label: 'Hết hạn GPLX (dd/MM/YYYY)',
+                  value: controller.driverLicenseExpiry.value,
+                  onChanged: (v) => controller.driverLicenseExpiry.value = v,
                   enabled: isEditing,
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'CCCD / CMND',
-                  value: controller.nationalId.value,
-                  onChanged: (v) => controller.nationalId.value = v,
-                  enabled: isEditing,
-                  icon: Icons.perm_identity,
-                  keyboardType: TextInputType.number,
+                  icon: Icons.calendar_today_outlined,
+                  keyboardType: TextInputType.datetime,
                 ),
                 const SizedBox(height: 20),
-                // Ảnh đại diện
+                // Ảnh GPLX
                 ImageUploadField(
-                  label: 'Ảnh đại diện',
-                  imageType: 'avatar',
+                  label: 'Ảnh GPLX',
+                  imageType: 'driverLicensePhoto',
                   controller: controller,
                   enabled: isEditing,
                 ),

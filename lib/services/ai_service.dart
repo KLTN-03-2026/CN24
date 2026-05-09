@@ -46,8 +46,8 @@ class AIService {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         return data['reply'] ?? 'Lỗi: Server không trả về nội dung.';
       } else {
-        print('AIService Server Error: \${response.statusCode}');
-        return 'Xin lỗi, máy chủ Chatbot đang gặp sự cố (Lỗi \${response.statusCode}).';
+        print('AIService Server Error: ${response.statusCode}');
+        return 'Xin lỗi, máy chủ Chatbot đang gặp sự cố (Lỗi ${response.statusCode}).';
       }
     } catch (e) {
       print('AIService Connection Error: $e');

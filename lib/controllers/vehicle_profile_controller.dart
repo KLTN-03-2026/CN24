@@ -29,6 +29,7 @@ class VehicleProfileController extends GetxController {
   final RxBool isEditingDriverInfo = false.obs;
   final RxBool isEditingVehicleInfo = false.obs;
   final RxBool isEditingDocuments = false.obs;
+  final RxBool isEditingLicenseInfo = false.obs;
 
   // Form data (editable copies)
   // Driver Info
@@ -314,6 +315,7 @@ class VehicleProfileController extends GetxController {
       isEditingDriverInfo.value = false;
       isEditingVehicleInfo.value = false;
       isEditingDocuments.value = false;
+      isEditingLicenseInfo.value = false;
 
       successMessage.value = 'Lưu thông tin thành công!';
       Get.snackbar(

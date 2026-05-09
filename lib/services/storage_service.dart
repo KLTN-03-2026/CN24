@@ -39,6 +39,32 @@ class StorageService {
     }
   }
 
+  /// Upload ảnh đại diện người dùng
+  Future<String> uploadUserAvatar({
+    required String userId,
+    required File imageFile,
+  }) async {
+    try {
+      final String fileName =
+          'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Reference ref = _storage.ref().child('avatars/$userId/$fileName');
+
+      final UploadTask uploadTask = ref.putFile(
+        imageFile,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      final TaskSnapshot snapshot = await uploadTask;
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      debugPrint('[StorageService] Upload avatar thành công: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('[StorageService] Upload avatar lỗi: $e');
+      rethrow;
+    }
+  }
+
   /// Xóa ảnh cũ theo URL (nếu cần thay thế)
   Future<void> deleteImageByUrl(String url) async {
     try {

@@ -6,6 +6,7 @@ import 'package:ride_now_khoaluan/views/auth/login_view.dart';
 import 'package:ride_now_khoaluan/views/auth/register_view.dart';
 import 'package:ride_now_khoaluan/views/change_password_view.dart';
 import 'package:ride_now_khoaluan/views/main/main_view.dart';
+import 'package:ride_now_khoaluan/views/main/profiles/my_complaints_view.dart';
 
 class AppPages {
   static const initial = AppRoutes.splash;
@@ -19,6 +20,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.changePassword,
       page: () => const ChangePasswordView(),
+    ),
+    GetPage(
+      name: AppRoutes.myComplaints,
+      page: () => const MyComplaintsView(),
     ),
   ];
 }

@@ -1,11 +1,41 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 import '../models/ride_request_model.dart';
 import '../models/trip_model.dart';
+import '../models/complaint_model.dart';
 
 class RideRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  // Upload tệp lên Firebase Storage và trả về danh sách URL
+  Future<List<String>> uploadFiles(List<File> files, String path) async {
+    List<String> downloadUrls = [];
+    for (var file in files) {
+      try {
+        // Lấy tên file an toàn
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.path.split(RegExp(r'[/\\]')).last}';
+        final ref = _storage.ref().child(path).child(fileName);
+
+        // Đọc tệp thành bytes để upload (tránh lỗi đường dẫn cục bộ)
+        final bytes = await file.readAsBytes();
+
+        // Upload và đợi hoàn tất
+        final uploadTask = await ref.putData(bytes);
+
+        // Lấy URL sau khi đã upload thành công
+        final url = await uploadTask.ref.getDownloadURL();
+        downloadUrls.add(url);
+      } catch (e) {
+        debugPrint('Firebase Storage Error: $e');
+        rethrow; // Ném lỗi để UI hiển thị thông báo chi tiết hơn
+      }
+    }
+    return downloadUrls;
+  }
 
   // Tạo ride request mới
   Future<void> createRideRequest(RideRequestModel request) async {
@@ -522,5 +552,35 @@ class RideRepository {
       'totalEarnings': totalEarnings,
       'completedTrips': completedTrips.length,
     };
+  }
+
+  // Gửi khiếu nại
+  Future<void> submitComplaint(ComplaintModel complaint) async {
+    try {
+      await _firestore
+          .collection('complaints')
+          .doc(complaint.id)
+          .set(complaint.toMap());
+    } catch (e) {
+      debugPrint('[RideRepository] submitComplaint error: $e');
+      rethrow;
+    }
+  }
+
+  // Lấy danh sách khiếu nại của một user
+  Stream<List<ComplaintModel>> getComplaints(String userId) {
+    return _firestore
+        .collection('complaints')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map((doc) => ComplaintModel.fromMap(doc.data(), doc.id))
+          .toList();
+
+      // Sắp xếp thủ công theo thời gian giảm dần (mới nhất lên đầu)
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    });
   }
 }

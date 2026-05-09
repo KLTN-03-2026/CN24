@@ -26,24 +26,25 @@ class _CustomerTripHistoryScreenState extends State<CustomerTripHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final userId = _authController.userModel?.id ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Lịch sử chuyến đi',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          'trip_history'.tr,
+          style: theme.appBarTheme.titleTextStyle,
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        foregroundColor: Colors.black,
       ),
       body: Column(
         children: [
           // Search & Filter Header
           Container(
-            color: Colors.white,
+            color: theme.scaffoldBackgroundColor,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Column(
               children: [
@@ -51,11 +52,13 @@ class _CustomerTripHistoryScreenState extends State<CustomerTripHistoryScreen> {
                 TextField(
                   controller: _searchController,
                   onChanged: (val) => setState(() => _searchQuery = val),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
-                    hintText: 'Tìm kiếm mã chuyến, địa điểm...',
-                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'search_trip_hint'.tr,
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                    prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurfaceVariant),
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: theme.cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -76,18 +79,16 @@ class _CustomerTripHistoryScreenState extends State<CustomerTripHistoryScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
-                          label: Text(filter),
+                          label: Text(filter.tr),
                           selected: isSelected,
                           onSelected: (val) =>
                               setState(() => _selectedFilter = filter),
-                          backgroundColor: Colors.white,
-                          selectedColor: const Color(
-                            0xFF223285,
-                          ).withOpacity(0.1),
+                          backgroundColor: theme.cardColor,
+                          selectedColor: theme.primaryColor.withOpacity(0.1),
                           labelStyle: TextStyle(
                             color: isSelected
-                                ? const Color(0xFF223285)
-                                : Colors.grey[600],
+                                ? theme.primaryColor
+                                : theme.colorScheme.onSurfaceVariant,
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -96,8 +97,8 @@ class _CustomerTripHistoryScreenState extends State<CustomerTripHistoryScreen> {
                           shape: StadiumBorder(
                             side: BorderSide(
                               color: isSelected
-                                  ? const Color(0xFF223285)
-                                  : Colors.grey[200]!,
+                                  ? theme.primaryColor
+                                  : theme.dividerColor.withOpacity(0.1),
                             ),
                           ),
                           showCheckmark: false,

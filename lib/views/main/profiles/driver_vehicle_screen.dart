@@ -6,16 +6,25 @@ import 'package:ride_now_khoaluan/views/main/profiles/vehicle/widgets/driver_inf
 import 'package:ride_now_khoaluan/views/main/profiles/vehicle/widgets/pending_update_banner.dart';
 import 'package:ride_now_khoaluan/views/main/profiles/vehicle/widgets/vehicle_documents_section.dart';
 import 'package:ride_now_khoaluan/views/main/profiles/vehicle/widgets/vehicle_info_section.dart';
+import 'package:ride_now_khoaluan/views/main/profiles/vehicle/widgets/license_info_section.dart';
 import 'package:ride_now_khoaluan/views/main/profiles/vehicle/widgets/vehicle_status_badge.dart';
 
 /// Màn hình quản lý hồ sơ xe của tài xế
 /// Giao diện tham khảo phong cách Grab Driver
-class DriverVehicleScreen extends StatelessWidget {
-  const DriverVehicleScreen({super.key});
+class DriverVehicleScreen extends StatefulWidget {
+  final int initialSection;
+  const DriverVehicleScreen({super.key, this.initialSection = 0});
 
+  @override
+  State<DriverVehicleScreen> createState() => _DriverVehicleScreenState();
+}
+
+class _DriverVehicleScreenState extends State<DriverVehicleScreen> {
   static const _primary = Color(0xFF1C64F2);
   static const _bg = Color(0xFFF8FAFC);
   static const _textDark = Color(0xFF0F172A);
+
+  // GlobalKey không còn cần thiết cho việc cuộn
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +41,13 @@ class DriverVehicleScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         centerTitle: true,
-        title: const Text(
-          'Thông tin xe',
-          style: TextStyle(
+        title: Text(
+          widget.initialSection == 0
+              ? 'driver_info'.tr
+              : widget.initialSection == 1
+                  ? 'vehicle_info'.tr
+                  : 'license_info'.tr,
+          style: const TextStyle(
             color: _textDark,
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -125,16 +138,19 @@ class DriverVehicleScreen extends StatelessWidget {
                       );
                     }),
 
-                    // Section 1: Thông tin tài xế
-                    DriverInfoSection(controller: controller),
-                    const SizedBox(height: 24),
+                    // Hiển thị section tương ứng
+                    if (widget.initialSection == 0)
+                      DriverInfoSection(controller: controller),
+                    
+                    if (widget.initialSection == 1) ...[
+                      VehicleInfoSection(controller: controller),
+                      const SizedBox(height: 24),
+                      VehicleDocumentsSection(controller: controller),
+                    ],
 
-                    // Section 2: Thông tin xe
-                    VehicleInfoSection(controller: controller),
-                    const SizedBox(height: 24),
-
-                    // Section 3: Giấy tờ xe
-                    VehicleDocumentsSection(controller: controller),
+                    if (widget.initialSection == 2)
+                      LicenseInfoSection(controller: controller),
+                    
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -155,7 +171,8 @@ class DriverVehicleScreen extends StatelessWidget {
       final isSaving = controller.isSaving.value;
       final isAnyEditing = controller.isEditingDriverInfo.value ||
           controller.isEditingVehicleInfo.value ||
-          controller.isEditingDocuments.value;
+          controller.isEditingDocuments.value ||
+          controller.isEditingLicenseInfo.value;
 
       // Ẩn nút khi không có section nào đang edit
       // Trừ khi chưa có profile (lần đầu tạo)

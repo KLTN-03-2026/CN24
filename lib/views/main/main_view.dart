@@ -12,6 +12,8 @@ import 'package:ride_now_khoaluan/views/main/notifications/notification_view.dar
 import 'package:ride_now_khoaluan/views/main/profiles/profile_view.dart';
 import 'package:ride_now_khoaluan/views/main/trips/customer_history_view.dart';
 import 'package:ride_now_khoaluan/views/main/trips/driver_history_view.dart';
+import 'package:ride_now_khoaluan/views/main/profiles/settings_view.dart';
+
 
 class MainView extends StatefulWidget {
   const MainView({super.key});
@@ -44,6 +46,7 @@ class _MainViewState extends State<MainView> {
     }),
     const NotificationView(),
     const ProfileView(),
+    const SettingsView(),
   ];
 
   @override
@@ -95,10 +98,10 @@ class _MainViewState extends State<MainView> {
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long),
-            label: 'Trip',
+          BottomNavigationBarItem(icon: const Icon(Icons.home), label: 'home'.tr),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.receipt_long),
+            label: 'trips'.tr,
           ),
           BottomNavigationBarItem(
             icon: Badge(
@@ -114,9 +117,10 @@ class _MainViewState extends State<MainView> {
               backgroundColor: Colors.red,
               child: const Icon(Icons.notifications),
             ),
-            label: 'Notifications',
+            label: 'notifications'.tr,
           ),
-          const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: const Icon(Icons.person), label: 'profile'.tr),
+          BottomNavigationBarItem(icon: const Icon(Icons.settings), label: 'settings'.tr),
         ],
       ),
     );

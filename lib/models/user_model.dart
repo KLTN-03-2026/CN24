@@ -164,6 +164,8 @@ class UserModel {
   final int ratingCount;
   final double earnings;
   final DateTime createdAt;
+  final String? language;
+  final String? theme;
 
   UserModel({
     required this.id,
@@ -183,6 +185,8 @@ class UserModel {
     this.ratingCount = 0,
     this.earnings = 0,
     required this.createdAt,
+    this.language,
+    this.theme,
   });
 
   static DateTime _parseCreatedAt(dynamic value) {
@@ -211,6 +215,8 @@ class UserModel {
       ratingCount: json['ratingCount'] ?? 0,
       earnings: (json['earnings'] as num?)?.toDouble() ?? 0,
       createdAt: _parseCreatedAt(json['createdAt']),
+      language: json['language'],
+      theme: json['theme'],
     );
   }
 
@@ -225,6 +231,8 @@ class UserModel {
       'ratingCount': ratingCount,
       'earnings': earnings,
       'createdAt': Timestamp.fromDate(createdAt),
+      'language': language,
+      'theme': theme,
     };
 
     if (phone != null) map['phone'] = phone;
@@ -258,6 +266,8 @@ class UserModel {
       ratingCount: map['ratingCount'] ?? 0,
       earnings: (map['earnings'] as num?)?.toDouble() ?? 0,
       createdAt: _parseCreatedAt(map['createdAt']),
+      language: map['language'],
+      theme: map['theme'],
     );
   }
 
@@ -279,6 +289,8 @@ class UserModel {
     int? ratingCount,
     double? earnings,
     DateTime? createdAt,
+    String? language,
+    String? theme,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -298,6 +310,8 @@ class UserModel {
       ratingCount: ratingCount ?? this.ratingCount,
       earnings: earnings ?? this.earnings,
       createdAt: createdAt ?? this.createdAt,
+      language: language ?? this.language,
+      theme: theme ?? this.theme,
     );
   }
 }
