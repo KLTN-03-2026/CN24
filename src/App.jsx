@@ -25,6 +25,8 @@ import CustomersPage from './pages/CustomersPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import MapPage from './pages/MapPage'
 import PaymentsPage from './pages/PaymentsPage'
+import ComplaintsPage from './pages/ComplaintsPage'
+import ReviewsPage from './pages/ReviewsPage'
 import SettingsPage from './pages/SettingsPage'
 import ErrorBoundary from './components/ErrorBoundary'
 
@@ -182,7 +184,7 @@ function App() {
       case 'nav-customers':
         return <CustomersPage />
       case 'nav-analytics':
-        return <AnalyticsPage stats={stats} trips={trips} />
+        return <AnalyticsPage />
       case 'nav-map':
         const mergedDrivers = allDriversList.map(driver => {
           const driverId = driver.id || driver.uid
@@ -196,6 +198,10 @@ function App() {
         )
       case 'nav-payments':
         return <PaymentsPage trips={trips} />
+      case 'nav-complaints':
+        return <ComplaintsPage />
+      case 'nav-reviews':
+        return <ReviewsPage />
       case 'nav-settings':
         return <SettingsPage />
       case 'nav-dashboard':

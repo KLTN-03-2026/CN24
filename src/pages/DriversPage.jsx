@@ -1,21 +1,32 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { onAllDrivers, syncDriverStats } from '../firestoreService'
-import { formatCurrency, formatFare, getInitials, formatDateShort } from '../utils/helpers'
+import { onAllDrivers, syncDriverStats, onDriverReviews } from '../firestoreService'
+import { formatCurrency, formatFare, getInitials, formatDateShort, timeAgo } from '../utils/helpers'
 import Icons from '../components/Icons'
 
 function DriverDetailModal({ driver, onClose }) {
   if (!driver) return null
+  const [reviews, setReviews] = useState([])
+  const [loadingReviews, setLoadingReviews] = useState(true)
+
+  useEffect(() => {
+    setLoadingReviews(true)
+    const unsub = onDriverReviews(driver.id, (data) => {
+      setReviews(data)
+      setLoadingReviews(false)
+    })
+    return () => unsub()
+  }, [driver.id])
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal driver-detail-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal driver-detail-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px' }}>
         <div className="modal__header">
           <h2 className="modal__title">👨‍✈️ Thông tin tài xế</h2>
           <button className="modal__close" onClick={onClose}>
             {Icons.close}
           </button>
         </div>
-        <div className="modal__body">
+        <div className="modal__body" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
           <div className="driver-detail__profile">
             <div className="driver-detail__avatar">
               {getInitials(driver.name)}
@@ -46,31 +57,67 @@ function DriverDetailModal({ driver, onClose }) {
 
           <div className="trip-detail">
             <div className="trip-detail__divider" />
-            <div className="trip-detail__row">
-              <span className="trip-detail__label">📧 Email</span>
-              <span className="trip-detail__value">{driver.email || '—'}</span>
-            </div>
-            <div className="trip-detail__row">
-              <span className="trip-detail__label">📱 Số điện thoại</span>
-              <span className="trip-detail__value">{driver.phone || '—'}</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="trip-detail__row">
+                <span className="trip-detail__label">📧 Email</span>
+                <span className="trip-detail__value text-sm">{driver.email || '—'}</span>
+              </div>
+              <div className="trip-detail__row">
+                <span className="trip-detail__label">📱 Số điện thoại</span>
+                <span className="trip-detail__value">{driver.phone || '—'}</span>
+              </div>
+              <div className="trip-detail__row">
+                <span className="trip-detail__label">🏍️ Loại xe</span>
+                <span className="trip-detail__value">{driver.vehicleType || '—'}</span>
+              </div>
+              <div className="trip-detail__row">
+                <span className="trip-detail__label">🆔 Biển số</span>
+                <span className="trip-detail__value">{driver.vehiclePlate || '—'}</span>
+              </div>
             </div>
             <div className="trip-detail__divider" />
-            <div className="trip-detail__row">
-              <span className="trip-detail__label">🏍️ Loại xe</span>
-              <span className="trip-detail__value">{driver.vehicleType || '—'}</span>
-            </div>
-            <div className="trip-detail__row">
-              <span className="trip-detail__label">🆔 Biển số</span>
-              <span className="trip-detail__value">{driver.vehiclePlate || '—'}</span>
-            </div>
-            <div className="trip-detail__divider" />
-            <div className="trip-detail__row">
-              <span className="trip-detail__label">🕐 Ngày đăng ký</span>
-              <span className="trip-detail__value">{formatDateShort(driver.createdAt)}</span>
-            </div>
+            
+            <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
+              ⭐ Đánh giá gần đây ({reviews.length})
+            </h4>
+
+            {loadingReviews ? (
+              <div className="py-8 text-center opacity-50">Đang tải đánh giá...</div>
+            ) : reviews.length === 0 ? (
+              <div className="py-8 text-center opacity-50 text-sm">Chưa có đánh giá nào.</div>
+            ) : (
+              <div className="driver-reviews-list flex flex-col gap-3">
+                {reviews.map(review => (
+                  <div key={review.id} className="driver-review-item bg-surface-800/40 p-3 rounded-lg border border-surface-700/50">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-xs text-surface-100">{review.customerName}</span>
+                      <span className="text-[10px] opacity-50">{timeAgo(review.createdAt)}</span>
+                    </div>
+                    <div className="flex text-warning-400 mb-2" style={{ fontSize: '10px' }}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i}>{i < review.rating ? '★' : '☆'}</span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-surface-200 leading-relaxed italic">
+                      {review.comment ? `"${review.comment}"` : 'Không có nhận xét.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .grid { display: grid; }
+        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .gap-4 { gap: 1rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-1 { margin-bottom: 0.25rem; }
+        .p-3 { padding: 0.75rem; }
+        .rounded-lg { border-radius: 0.5rem; }
+      `}} />
     </div>
   )
 }

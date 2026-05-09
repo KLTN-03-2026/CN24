@@ -18,22 +18,22 @@ function MapPage({ drivers = [], trips = [] }) {
     // Nếu tài xế ngoại tuyến (check cả isOnline từ users và driver_locations)
     const isOnline = driver.isOnline === true
     if (!isOnline) return { label: 'Ngoại tuyến', color: '#94a3b8', status: 'offline' }
-    
+
     // Nếu đang online nhưng không sẵn sàng (đang bận)
     if (driver.isAvailable === false) {
       return { label: 'Đang bận', color: '#ef4444', status: 'busy' }
     }
 
     // Kiểm tra thêm trong danh sách chuyến đi (logic dự phòng)
-    const activeTrip = trips.find(t => 
-      t.driverId === (driver.id || driver.uid) && 
+    const activeTrip = trips.find(t =>
+      t.driverId === (driver.id || driver.uid) &&
       ['on_the_way', 'accepted', 'driver_assigned'].includes(t.status)
     )
-    
+
     if (activeTrip) {
       return { label: 'Đang bận', color: '#ef4444', status: 'busy', tripId: activeTrip.id }
     }
-    
+
     return { label: 'Sẵn sàng', color: '#22c55e', status: 'available' }
   }
 
@@ -42,7 +42,7 @@ function MapPage({ drivers = [], trips = [] }) {
     // Thử các field phổ biến
     let dLat = driver.lat || driver.latitude
     let dLng = driver.lng || driver.longitude
-    
+
     // Check location object (GeoPoint từ Firestore)
     if (!dLat && driver.location) {
       if (typeof driver.location.latitude === 'number') {
@@ -95,7 +95,7 @@ function MapPage({ drivers = [], trips = [] }) {
 
     try {
       const styleUrl = `https://maps.track-asia.com/styles/v2/streets.json?key=${TRACKASIA_KEY}`
-      
+
       map.current = new maplibregl.Map({
         container: mapContainer.current,
         style: styleUrl,
@@ -146,7 +146,7 @@ function MapPage({ drivers = [], trips = [] }) {
       const driverId = driver.id || driver.uid
       const { lat: dLat, lng: dLng, isSimulated } = getCoordinates(driver)
       const { label, color, status } = getDriverStatus(driver)
-      
+
       if (!dLat || !dLng) return
 
 
@@ -157,10 +157,10 @@ function MapPage({ drivers = [], trips = [] }) {
         el.className = `map-marker map-marker--${status}`
         el.style.cursor = 'pointer'
         el.style.transition = 'all 0.3s ease'
-        
+
         const { label, color: statusColor, status: driverStatus } = getDriverStatus(driver)
         const statusIcon = driverStatus === 'available' ? '🟢' : driverStatus === 'busy' ? '🔴' : '⚫'
-        
+
         el.innerHTML = `
           <div class="marker-content" style="position: relative; width: 44px; height: 64px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
             <img src="/images/motorcycle-top.png" alt="driver" style="width: 40px; height: 58px; object-fit: contain; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); pointer-events: none;" />
@@ -170,9 +170,9 @@ function MapPage({ drivers = [], trips = [] }) {
         `
 
         // Tạo Popup hiện khi hover - chỉ hiện tên + trạng thái online/offline
-        const popup = new maplibregl.Popup({ 
-          offset: [0, -35], 
-          closeButton: false, 
+        const popup = new maplibregl.Popup({
+          offset: [0, -35],
+          closeButton: false,
           closeOnClick: false,
           className: 'driver-popup'
         }).setHTML(`
@@ -251,11 +251,11 @@ function MapPage({ drivers = [], trips = [] }) {
         {/* Bản đồ */}
         <div style={{ flex: '1 1 70%', position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--surface-800)' }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          
+
           {mapError && (
-            <div style={{ 
+            <div style={{
               position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', 
+              alignItems: 'center', justifyContent: 'center',
               background: 'rgba(15, 23, 42, 0.9)', zIndex: 10, color: 'white', textAlign: 'center', padding: '20px'
             }}>
               <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
@@ -269,9 +269,9 @@ function MapPage({ drivers = [], trips = [] }) {
           )}
 
           {/* Live Status Overlay */}
-          <div style={{ 
-            position: 'absolute', bottom: '20px', left: '20px', 
-            background: 'rgba(15, 23, 42, 0.8)', padding: '12px 20px', 
+          <div style={{
+            position: 'absolute', bottom: '20px', left: '20px',
+            background: 'rgba(15, 23, 42, 0.8)', padding: '12px 20px',
             borderRadius: 'var(--radius-md)', backdropFilter: 'blur(8px)',
             border: '1px solid var(--surface-700)', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 5
           }}>
@@ -284,8 +284,8 @@ function MapPage({ drivers = [], trips = [] }) {
         </div>
 
         {/* Bảng vị trí tài xế */}
-        <div style={{ 
-          flex: '0 0 320px', background: 'var(--surface-900)', borderRadius: 'var(--radius-lg)', 
+        <div style={{
+          flex: '0 0 320px', background: 'var(--surface-900)', borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--surface-800)', display: 'flex', flexDirection: 'column', overflow: 'hidden'
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--surface-800)' }}>
@@ -348,7 +348,7 @@ function MapPage({ drivers = [], trips = [] }) {
                     </div>
 
                     {/* Hàng 2: Tọa độ */}
-                    <div style={{ 
+                    <div style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '6px 10px'
                     }}>

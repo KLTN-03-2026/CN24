@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { onAllCustomers } from '../firestoreService'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { onAllCustomers, syncCustomerStats } from '../firestoreService'
 import { getInitials, formatDateShort } from '../utils/helpers'
 import Icons from '../components/Icons'
 
@@ -70,6 +70,8 @@ function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -78,6 +80,18 @@ function CustomersPage() {
       setLoading(false)
     })
     return () => unsub()
+  }, [])
+  
+  const handleSync = useCallback(async () => {
+    setSyncLoading(true)
+    const result = await syncCustomerStats()
+    setSyncLoading(false)
+    if (result.success) {
+      setToast({ message: `Đã cập nhật dữ liệu cho ${result.updatedCount} khách hàng!`, type: 'success' })
+    } else {
+      setToast({ message: `Lỗi: ${result.error}`, type: 'error' })
+    }
+    setTimeout(() => setToast(null), 3000)
   }, [])
 
   const filteredCustomers = useMemo(() => {
@@ -121,6 +135,14 @@ function CustomersPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <button 
+          className="confirm-modal__btn confirm-modal__btn--delete" 
+          style={{ background: 'var(--primary-600)', minWidth: '160px' }}
+          onClick={handleSync}
+          disabled={syncLoading}
+        >
+          {syncLoading ? '⏳ Đang tính toán...' : '🔄 Cập nhật số chuyến'}
+        </button>
       </div>
 
       <div className="table-card rides-table-card">
@@ -168,6 +190,12 @@ function CustomersPage() {
 
       {selectedCustomer && (
         <CustomerDetailModal customer={selectedCustomer} onClose={() => setSelectedCustomer(null)} />
+      )}
+
+      {toast && (
+        <div className={`rides-toast rides-toast--${toast.type}`} style={{ zIndex: 1000 }}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.message}
+        </div>
       )}
     </section>
   )

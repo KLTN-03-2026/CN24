@@ -104,6 +104,8 @@ export const sidebarLinks = [
   { section: 'Tài chính' },
   { id: 'nav-payments', icon: 'wallet', label: 'Thanh toán' },
   { section: 'Hệ thống' },
+  { id: 'nav-complaints', icon: 'help', label: 'Khiếu nại' },
+  { id: 'nav-reviews', icon: 'star', label: 'Đánh giá' },
   { id: 'nav-settings', icon: 'settings', label: 'Cài đặt' },
   { id: 'nav-help', icon: 'help', label: 'Trợ giúp' },
 ]

@@ -1,19 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { formatCurrency, formatNumber } from '../utils/helpers'
-import Icons from '../components/Icons'
+import { formatChartCurrency } from '../utils/analyticsHelpers'
+import useRideAnalytics from '../hooks/useRideAnalytics'
 
-function AnalyticsPage({ stats, trips }) {
+function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('week')
+  const { stats, chartData, statusRates, loading, error, refetch } = useRideAnalytics(timeRange)
 
-  // Tính toán dữ liệu tăng trưởng (Giả lập dựa trên trips thật)
-  const growthData = useMemo(() => {
-    // Trong thực tế sẽ tính toán dựa trên dữ liệu lịch sử từ Firestore
-    return {
-      revenue: "+12.5%",
-      trips: "+8.2%",
-      users: "+5.4%"
-    }
-  }, [])
+  // Tìm giá trị max trong chartData để scale chiều cao cột
+  const maxChartValue = Math.max(...chartData.map(d => d.value), 1)
 
   return (
     <section className="rides-page">
@@ -35,28 +30,57 @@ function AnalyticsPage({ stats, trips }) {
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="analytics-error">
+          <span>⚠️ {error}</span>
+          <button onClick={refetch} className="analytics-error__retry">Thử lại</button>
+        </div>
+      )}
+
       {/* Analytics Cards */}
       <div className="rides-stats">
-        <div className="rides-stat rides-stat--revenue">
+        <div className={`rides-stat rides-stat--revenue ${loading ? 'analytics-loading' : ''}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span className="rides-stat__label">Tổng doanh thu</span>
-            <span style={{ color: 'var(--success-400)', fontSize: 'var(--font-xs)', fontWeight: 600 }}>{growthData.revenue} ↑</span>
+            <span
+              className="analytics-growth"
+              style={{ color: stats.revenueGrowth.isPositive ? 'var(--success-400)' : 'var(--danger-400)' }}
+            >
+              {stats.revenueGrowth.text} {stats.revenueGrowth.isPositive ? '↑' : '↓'}
+            </span>
           </div>
-          <span className="rides-stat__number">{formatCurrency(stats.totalRevenue)}</span>
+          <span className="rides-stat__number">
+            {loading ? '...' : formatCurrency(stats.totalRevenue)}
+          </span>
         </div>
-        <div className="rides-stat rides-stat--total">
+        <div className={`rides-stat rides-stat--total ${loading ? 'analytics-loading' : ''}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span className="rides-stat__label">Tổng chuyến đi</span>
-            <span style={{ color: 'var(--success-400)', fontSize: 'var(--font-xs)', fontWeight: 600 }}>{growthData.trips} ↑</span>
+            <span
+              className="analytics-growth"
+              style={{ color: stats.tripsGrowth.isPositive ? 'var(--success-400)' : 'var(--danger-400)' }}
+            >
+              {stats.tripsGrowth.text} {stats.tripsGrowth.isPositive ? '↑' : '↓'}
+            </span>
           </div>
-          <span className="rides-stat__number">{formatNumber(stats.totalTrips)}</span>
+          <span className="rides-stat__number">
+            {loading ? '...' : formatNumber(stats.totalTrips)}
+          </span>
         </div>
-        <div className="rides-stat rides-stat--active">
+        <div className={`rides-stat rides-stat--active ${loading ? 'analytics-loading' : ''}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span className="rides-stat__label">Người dùng mới</span>
-            <span style={{ color: 'var(--success-400)', fontSize: 'var(--font-xs)', fontWeight: 600 }}>{growthData.users} ↑</span>
+            <span
+              className="analytics-growth"
+              style={{ color: stats.usersGrowth.isPositive ? 'var(--success-400)' : 'var(--danger-400)' }}
+            >
+              {stats.usersGrowth.text} {stats.usersGrowth.isPositive ? '↑' : '↓'}
+            </span>
           </div>
-          <span className="rides-stat__number">+{formatNumber(Math.floor(stats.totalUsers * 0.1))}</span>
+          <span className="rides-stat__number">
+            {loading ? '...' : `+${formatNumber(stats.newUsers)}`}
+          </span>
         </div>
       </div>
 
@@ -67,57 +91,130 @@ function AnalyticsPage({ stats, trips }) {
             <h3 className="chart-card__title">Biểu đồ doanh thu chi tiết</h3>
             <span style={{ fontSize: 'var(--font-xs)', color: 'var(--surface-500)' }}>Đơn vị: VNĐ</span>
           </div>
-          <div className="mini-chart" style={{ height: '300px', alignItems: 'flex-end', paddingBottom: '40px' }}>
-            {/* Giả lập các cột doanh thu */}
-            {[40, 65, 55, 85, 95, 75, 80].map((height, idx) => (
-              <div className="mini-chart__bar-group" key={idx} style={{ flex: 1 }}>
-                <div 
-                  className="mini-chart__bar" 
-                  style={{ 
-                    height: `${height}%`, 
-                    background: 'linear-gradient(to top, var(--primary-600), var(--primary-400))',
-                    width: '60%'
-                  }} 
-                />
-                <span className="mini-chart__label">{['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][idx]}</span>
-              </div>
-            ))}
-          </div>
+
+          {loading ? (
+            <div className="analytics-chart-loading">
+              <div className="analytics-spinner" />
+              <span>Đang tải dữ liệu...</span>
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="analytics-chart-empty">
+              <span>📭 Không có dữ liệu trong khoảng thời gian này</span>
+            </div>
+          ) : (
+            <div
+              className="mini-chart"
+              style={{
+                height: '300px',
+                alignItems: 'flex-end',
+                paddingBottom: '40px',
+                overflowX: chartData.length > 15 ? 'auto' : 'visible',
+              }}
+            >
+              {chartData.map((item, idx) => {
+                const heightPercent = maxChartValue > 0
+                  ? Math.max((item.value / maxChartValue) * 100, item.value > 0 ? 4 : 0)
+                  : 0;
+
+                return (
+                  <div
+                    className="mini-chart__bar-group"
+                    key={idx}
+                    style={{
+                      flex: chartData.length <= 12 ? 1 : '0 0 48px',
+                    }}
+                  >
+                    {/* Tooltip hiển thị số tiền */}
+                    {item.value > 0 && (
+                      <span className="analytics-bar-tooltip">
+                        {formatChartCurrency(item.value)}
+                      </span>
+                    )}
+                    <div
+                      className="mini-chart__bar"
+                      style={{
+                        height: `${heightPercent}%`,
+                        background: 'linear-gradient(to top, var(--primary-600), var(--primary-400))',
+                        width: '60%',
+                        transition: 'height 0.4s ease-out',
+                      }}
+                    />
+                    <span className="mini-chart__label">{item.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Top Drivers/Customers Statistics */}
+        {/* Tỉ lệ trạng thái chuyến đi */}
         <div className="table-card">
           <div className="table-card__header">
             <h3 className="table-card__title">Tỉ lệ trạng thái chuyến đi</h3>
           </div>
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: 'var(--font-sm)' }}>Hoàn thành</span>
-                <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600 }}>75%</span>
+            {loading ? (
+              <div className="analytics-chart-loading" style={{ height: '120px' }}>
+                <div className="analytics-spinner" />
               </div>
-              <div style={{ height: '8px', background: 'var(--surface-800)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '75%', height: '100%', background: 'var(--success-500)' }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: 'var(--font-sm)' }}>Đã hủy</span>
-                <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600 }}>15%</span>
-              </div>
-              <div style={{ height: '8px', background: 'var(--surface-800)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '15%', height: '100%', background: 'var(--danger-500)' }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: 'var(--font-sm)' }}>Khác</span>
-                <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600 }}>10%</span>
-              </div>
-              <div style={{ height: '8px', background: 'var(--surface-800)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '10%', height: '100%', background: 'var(--warning-500)' }} />
-              </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: 'var(--font-sm)' }}>Hoàn thành</span>
+                    <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600 }}>{statusRates.completed}%</span>
+                  </div>
+                  <div style={{ height: '8px', background: 'var(--surface-800)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${statusRates.completed}%`,
+                        height: '100%',
+                        background: 'var(--success-500)',
+                        transition: 'width 0.5s ease-out',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: 'var(--font-sm)' }}>Đã hủy</span>
+                    <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600 }}>{statusRates.cancelled}%</span>
+                  </div>
+                  <div style={{ height: '8px', background: 'var(--surface-800)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${statusRates.cancelled}%`,
+                        height: '100%',
+                        background: 'var(--danger-500)',
+                        transition: 'width 0.5s ease-out',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: 'var(--font-sm)' }}>Đang xử lý</span>
+                    <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600 }}>{statusRates.processing}%</span>
+                  </div>
+                  <div style={{ height: '8px', background: 'var(--surface-800)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${statusRates.processing}%`,
+                        height: '100%',
+                        background: 'var(--warning-500)',
+                        transition: 'width 0.5s ease-out',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {stats.totalTrips === 0 && (
+                  <p style={{ fontSize: 'var(--font-xs)', color: 'var(--surface-500)', textAlign: 'center', marginTop: '8px' }}>
+                    Chưa có chuyến đi trong khoảng thời gian này
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
