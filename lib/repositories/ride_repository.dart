@@ -389,27 +389,46 @@ class RideRepository {
         final driverRef = _firestore.collection('users').doc(driverId);
         final driverSnap = await transaction.get(driverRef);
 
-        // 2. GHI: Cập nhật Trip document
+        // 2. ĐỌC: Lấy thông tin chuyến đi để có customerId/Name
         final tripRef = _firestore.collection('trips').doc(rideId);
+        final tripSnap = await transaction.get(tripRef);
+        final tripData = tripSnap.data() as Map<String, dynamic>? ?? {};
+        
+        final String customerId = tripData['customerId'] ?? '';
+        final String customerName = tripData['customerName'] ?? 'Khách hàng';
+        final String drvName = tripData['driverName'] ?? 'Tài xế';
+
+        // 3. GHI: Cập nhật Trip document
         transaction.update(tripRef, {
           'rating': rating,
           'feedback': feedback,
         });
 
-        // 3. GHI: Cập nhật thống kê tài xế & Gửi thông báo cho tài xế
+        // 4. GHI: Tạo bản ghi Review chính thức
+        final reviewRef = _firestore.collection('reviews').doc('rev_$rideId');
+        transaction.set(reviewRef, {
+          'id': 'rev_$rideId',
+          'tripId': rideId,
+          'customerId': customerId,
+          'customerName': customerName,
+          'driverId': driverId,
+          'driverName': drvName,
+          'rating': rating,
+          'comment': feedback,
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        });
+
+        // 5. GHI: Cập nhật thống kê tài xế & Gửi thông báo cho tài xế
         if (driverSnap.exists) {
           final driverData = driverSnap.data() as Map<String, dynamic>;
           
           // Lấy rating hiện tại và số lượng đánh giá
           final double currentRating = (driverData['rating'] as num?)?.toDouble() ?? 0.0;
           
-          // Ưu tiên dùng ratingCount, nếu chưa có thì dùng totalTrips (nhưng phải đảm bảo ít nhất là 0)
+          // Ưu tiên dùng ratingCount, nếu chưa có thì dùng totalTrips
           int currentRatingCount = 0;
           if (driverData.containsKey('ratingCount')) {
             currentRatingCount = driverData['ratingCount'] as int? ?? 0;
-          } else {
-            // Nếu là lần đầu đánh giá, coi như chưa có ratingCount
-            currentRatingCount = 0; 
           }
 
           final int newRatingCount = currentRatingCount + 1;
@@ -422,7 +441,7 @@ class RideRepository {
             'ratingCount': newRatingCount,
           });
 
-          // 4. GHI: Tạo thông báo cho tài xế về đánh giá mới
+          // 6. GHI: Tạo thông báo cho tài xế về đánh giá mới
           final driverNotifId = 'notif_rating_$rideId';
           final feedbackText = feedback.isNotEmpty 
               ? '\nNhận xét: "$feedback"' 
@@ -431,9 +450,15 @@ class RideRepository {
             'id': driverNotifId,
             'userId': driverId,
             'rideId': rideId,
+            'customerId': customerId,
+            'customerName': customerName,
+            'driverId': driverId,
+            'driverName': drvName,
+            'rating': rating,
+            'comment': feedback,
             'title': 'Bạn nhận được đánh giá ${rating.toStringAsFixed(1)} ⭐',
             'message': 'Khách hàng đã đánh giá bạn ${rating.toStringAsFixed(1)} sao cho chuyến đi vừa rồi.$feedbackText',
-            'type': 'info',
+            'type': 'rating',
             'isRead': false,
             'createdAt': Timestamp.fromDate(DateTime.now()),
           });
