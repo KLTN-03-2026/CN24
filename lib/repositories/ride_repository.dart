@@ -410,9 +410,13 @@ class RideRepository {
           'id': 'rev_$rideId',
           'tripId': rideId,
           'customerId': customerId,
+          'customerID': customerId, // Standardized field
           'customerName': customerName,
+          'username': customerName,   // Standardized field
           'driverId': driverId,
+          'driverID': driverId,     // Standardized field
           'driverName': drvName,
+          'name': drvName,          // Standardized field (driver name)
           'rating': rating,
           'comment': feedback,
           'createdAt': Timestamp.fromDate(DateTime.now()),
@@ -453,12 +457,10 @@ class RideRepository {
             'customerId': customerId,
             'customerName': customerName,
             'driverId': driverId,
-            'driverName': drvName,
-            'rating': rating,
-            'comment': feedback,
+            'name': drvName,
             'title': 'Bạn nhận được đánh giá ${rating.toStringAsFixed(1)} ⭐',
             'message': 'Khách hàng đã đánh giá bạn ${rating.toStringAsFixed(1)} sao cho chuyến đi vừa rồi.$feedbackText',
-            'type': 'rating',
+            'type': 'info', // Changed from 'rating' to 'info' to prevent driver from rating back
             'isRead': false,
             'createdAt': Timestamp.fromDate(DateTime.now()),
           });

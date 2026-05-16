@@ -154,14 +154,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: GestureDetector(
-              onTap: () => Get.to(() => const ProfileView()),
-              child: CircleAvatar(
+            child: Obx(() {
+              final user = _authController.userModel;
+              return CircleAvatar(
                 backgroundColor: theme.primaryColor,
                 radius: 18,
-                child: const Icon(Icons.person, color: Colors.white, size: 20),
-              ),
-            ),
+                backgroundImage: user?.avatar != null && user!.avatar!.isNotEmpty
+                    ? NetworkImage(user.avatar!)
+                    : null,
+                child: user?.avatar == null || user!.avatar!.isEmpty
+                    ? const Icon(Icons.person, color: Colors.white, size: 20)
+                    : null,
+              );
+            }),
           ),
         ],
       ),

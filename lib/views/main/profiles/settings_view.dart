@@ -8,6 +8,7 @@ import 'package:ride_now_khoaluan/views/main/profiles/my_complaints_view.dart';
 import 'package:ride_now_khoaluan/views/main/profiles/support_center_view.dart';
 import 'package:ride_now_khoaluan/views/main/profiles/vehicle_management_screen.dart';
 import 'package:ride_now_khoaluan/views/main/trips/submit_complaint_view.dart';
+import 'package:ride_now_khoaluan/controllers/settings_controller.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -15,6 +16,7 @@ class SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthController authController = Get.find<AuthController>();
+    final settingsController = Get.find<SettingsController>();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -273,9 +275,9 @@ class SettingsView extends StatelessWidget {
             _buildDialogItem(
               context,
               title: 'Tiếng Việt',
-              isSelected: authController.userModel?.language == 'vi',
+              isSelected: Get.find<SettingsController>().language == 'vi',
               onTap: () {
-                authController.updateAppSettings(language: 'vi');
+                Get.find<SettingsController>().updateLanguage('vi');
                 Get.back();
               },
             ),
@@ -283,9 +285,9 @@ class SettingsView extends StatelessWidget {
             _buildDialogItem(
               context,
               title: 'English',
-              isSelected: authController.userModel?.language == 'en',
+              isSelected: Get.find<SettingsController>().language == 'en',
               onTap: () {
-                authController.updateAppSettings(language: 'en');
+                Get.find<SettingsController>().updateLanguage('en');
                 Get.back();
               },
             ),
@@ -333,9 +335,9 @@ class SettingsView extends StatelessWidget {
               context,
               title: 'light'.tr,
               icon: Icons.light_mode_outlined,
-              isSelected: authController.userModel?.theme != 'dark',
+              isSelected: Get.find<SettingsController>().theme != 'dark',
               onTap: () {
-                authController.updateAppSettings(theme: 'light');
+                Get.find<SettingsController>().updateTheme('light');
                 Get.back();
               },
             ),
@@ -344,9 +346,9 @@ class SettingsView extends StatelessWidget {
               context,
               title: 'dark'.tr,
               icon: Icons.dark_mode_outlined,
-              isSelected: authController.userModel?.theme == 'dark',
+              isSelected: Get.find<SettingsController>().theme == 'dark',
               onTap: () {
-                authController.updateAppSettings(theme: 'dark');
+                Get.find<SettingsController>().updateTheme('dark');
                 Get.back();
               },
             ),

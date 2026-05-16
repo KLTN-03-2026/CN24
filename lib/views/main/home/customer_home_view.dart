@@ -1077,16 +1077,20 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
           Positioned(
             top: 50,
             right: 15,
-            child: GestureDetector(
-              onTap: () {
-                Get.to(() => const ProfileView());
-              },
-              child: Container(
+            child: Obx(() {
+              final user = _authController.userModel;
+              return Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   shape: BoxShape.circle,
+                  image: user?.avatar != null && user!.avatar!.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(user.avatar!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
@@ -1095,9 +1099,11 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
                     ),
                   ],
                 ),
-                child: Icon(Icons.person, color: theme.primaryColor, size: 24),
-              ),
-            ),
+                child: user?.avatar == null || user!.avatar!.isEmpty
+                    ? Icon(Icons.person, color: theme.primaryColor, size: 24)
+                    : null,
+              );
+            }),
           ),
 
           if (currentLocation != null)

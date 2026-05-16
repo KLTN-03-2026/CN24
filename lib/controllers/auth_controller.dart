@@ -44,13 +44,6 @@ class AuthController extends GetxController {
     super.onInit();
     _user.bindStream(_authService.authStateChanges);
     ever<User?>(_user, _handleAuthStateChange);
-    
-    // Áp dụng ngôn ngữ và giao diện mỗi khi dữ liệu User thay đổi
-    ever<UserModel?>(userModelRx, (model) {
-      if (model != null) {
-        _applyUserSettings(model);
-      }
-    });
   }
 
   Future<void> _handleAuthStateChange(User? user) async {
@@ -304,45 +297,6 @@ class AuthController extends GetxController {
     } finally {
       _isAuthenticating = false; // Luôn mở lại
       _isLoading.value = false;
-    }
-  }
-
-  /// Áp dụng các cài đặt về ngôn ngữ và theme từ UserModel vào hệ thống GetX
-  void _applyUserSettings(UserModel model) {
-    // 1. Áp dụng ngôn ngữ
-    if (model.language != null) {
-      final currentLocale = Get.locale?.languageCode;
-      if (currentLocale != model.language) {
-        Get.updateLocale(Locale(model.language!));
-      }
-    }
-
-    // 2. Áp dụng theme
-    if (model.theme != null) {
-      final isDark = model.theme == 'dark';
-      if (Get.isDarkMode != isDark) {
-        Get.changeThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
-      }
-    }
-  }
-
-  /// Cập nhật cài đặt ngôn ngữ/theme lên Firestore
-  Future<void> updateAppSettings({String? language, String? theme}) async {
-    if (userModelRx.value == null) return;
-
-    try {
-      final updatedModel = userModelRx.value!.copyWith(
-        language: language ?? userModelRx.value!.language,
-        theme: theme ?? userModelRx.value!.theme,
-      );
-
-      // Cập nhật Firestore
-      await _authService.updateUserModel(updatedModel);
-      
-      // Update local (worker sẽ tự động apply thông qua ever)
-      userModelRx.value = updatedModel;
-    } catch (e) {
-      debugPrint('[AuthController] updateAppSettings error: $e');
     }
   }
 }

@@ -4,14 +4,22 @@ import 'package:get/get.dart';
 import 'package:ride_now_khoaluan/controllers/auth_controller.dart';
 import 'package:ride_now_khoaluan/routes/app_pages.dart';
 import 'package:ride_now_khoaluan/services/ai_service.dart';
+import 'package:ride_now_khoaluan/services/local_storage_service.dart';
 import 'package:ride_now_khoaluan/services/translation_service.dart';
 import 'package:ride_now_khoaluan/theme/app_theme.dart';
+import 'package:ride_now_khoaluan/controllers/settings_controller.dart';
 
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Khởi tạo Local Storage
+  await LocalStorageService.init();
+
+  // Khởi tạo SettingsController trước tiên để áp dụng Theme/Lang
+  Get.put(SettingsController());
 
   // Khởi tạo AuthController
   Get.put(AuthController());
@@ -31,15 +39,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settingsController = Get.find<SettingsController>();
+
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: settingsController.theme == 'dark' ? ThemeMode.dark : ThemeMode.light,
       translations: TranslationService(),
-      locale: const Locale('vi'),
+      locale: Locale(settingsController.language),
       fallbackLocale: const Locale('en'),
     );
   }
