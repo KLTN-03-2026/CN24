@@ -53,13 +53,21 @@ class RideRepository {
     return RideRequestModel.fromMap(doc.data() as Map<String, dynamic>);
   }
 
-  // Cập nhật trạng thái ride request (có kiểm tra để tránh ghi đè trạng thái đã được tài xế nhận)
-  Future<void> updateRideStatus(String requestId, RideStatus status) async {
+  // Cập nhật trạng thái ride request
+  Future<void> updateRideStatus(
+    String requestId, 
+    RideStatus status, {
+    String? driverId,
+    String? driverName,
+  }) async {
     try {
-      await _firestore.runTransaction((transaction) async {
-        final docRef = _firestore.collection('ride_requests').doc(requestId);
-        final snapshot = await transaction.get(docRef);
+      final docRef = _firestore.collection('ride_requests').doc(requestId);
+      final Map<String, dynamic> data = {'status': status.name};
+      if (driverId != null) data['driverId'] = driverId;
+      if (driverName != null) data['driverName'] = driverName;
 
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
         if (!snapshot.exists) return;
 
         final currentStatus = snapshot.get('status') as String;
@@ -75,7 +83,7 @@ class RideRepository {
           }
         }
 
-        transaction.update(docRef, {'status': status.name});
+        transaction.update(docRef, data);
       });
     } catch (e) {
       debugPrint('[RideRepository] Error updating ride status: $e');
@@ -580,6 +588,37 @@ class RideRepository {
       'completedTrips': completedTrips.length,
     };
   }
+
+  // Cập nhật trạng thái online của tài xế
+  Future<void> updateDriverOnlineStatus(String driverId, bool isOnline) async {
+    await _firestore.collection('users').doc(driverId).update({
+      'isOnline': isOnline,
+    });
+  }
+
+  // Lắng nghe vị trí tài xế
+  Stream<GeoPoint?> watchDriverLocation(String driverId) {
+    return _firestore.collection('users').doc(driverId).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['latitude'] != null && data['longitude'] != null) {
+        return GeoPoint(
+          (data['latitude'] as num).toDouble(),
+          (data['longitude'] as num).toDouble(),
+        );
+      }
+      return null;
+    });
+  }
+
+  // Từ chối chuyến xe
+  Future<void> declineRide(String requestId, String driverId) async {
+    await _firestore.collection('ride_requests').doc(requestId).update({
+      'status': RideStatus.rejected.name,
+      'driverId': null, // Reset driverId để hệ thống tìm tài xế khác (nếu cần)
+    });
+  }
+
 
   // Gửi khiếu nại
   Future<void> submitComplaint(ComplaintModel complaint) async {

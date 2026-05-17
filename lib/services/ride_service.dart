@@ -21,14 +21,14 @@ class RideService {
   // Xóa để tránh nhầm lẫn.
 
   // Tạo request trực tiếp từ model
-  Future<void> createRideRequestDirectly(RideRequestModel request) async {
+  Future<String> createRideRequest(RideRequestModel request) async {
     try {
-      await _firestore
-          .collection('ride_requests')
-          .doc(request.id)
-          .set(request.toMap());
+      final docRef = _firestore.collection('ride_requests').doc();
+      final newRequest = request.copyWith(id: docRef.id);
+      await docRef.set(newRequest.toMap());
+      return docRef.id;
     } catch (e) {
-      debugPrint('[RideService] createRideRequestDirectly Error: $e');
+      debugPrint('[RideService] createRideRequest Error: $e');
       rethrow;
     }
   }

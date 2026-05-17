@@ -8,6 +8,9 @@ class LocationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription<Position>? _positionStreamSubscription;
 
+  // Bí danh để tương thích với CustomerHomeController
+  Future<Position> getCurrentLocation() => getCurrentPosition();
+
   // Lấy vị trí hiện tại một lần
   Future<Position> getCurrentPosition() async {
     bool serviceEnabled;
@@ -81,6 +84,15 @@ class LocationService {
       debugPrint('[LocationService] Status Update Error: $e');
       rethrow;
     }
+  }
+
+  // Lấy stream vị trí thực tế
+  Stream<Position> getPositionStream() {
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+    );
+    return Geolocator.getPositionStream(locationSettings: locationSettings);
   }
 
   Future<void> _updateDriverLocationInFirestore(String driverId, Position position) async {

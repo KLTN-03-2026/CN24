@@ -8,7 +8,7 @@ import 'package:ride_now_khoaluan/services/local_storage_service.dart';
 import 'package:ride_now_khoaluan/services/translation_service.dart';
 import 'package:ride_now_khoaluan/theme/app_theme.dart';
 import 'package:ride_now_khoaluan/controllers/settings_controller.dart';
-
+import 'package:ride_now_khoaluan/bindings/initial_binding.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -20,9 +20,6 @@ void main() async {
 
   // Khởi tạo SettingsController trước tiên để áp dụng Theme/Lang
   Get.put(SettingsController());
-
-  // Khởi tạo AuthController
-  Get.put(AuthController());
 
   // Khởi tạo AI Service với Gemini API Key
   const geminiKey = String.fromEnvironment(
@@ -45,6 +42,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
+      initialBinding: InitialBinding(), // Added this
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settingsController.theme == 'dark' ? ThemeMode.dark : ThemeMode.light,

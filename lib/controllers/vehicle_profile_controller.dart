@@ -150,7 +150,9 @@ class VehicleProfileController extends GetxController {
 
     if (year.value.trim().isNotEmpty) {
       final yearInt = int.tryParse(year.value.trim());
-      if (yearInt == null || yearInt < 1900 || yearInt > DateTime.now().year + 1) {
+      if (yearInt == null ||
+          yearInt < 1900 ||
+          yearInt > DateTime.now().year + 1) {
         return 'Năm sản xuất không hợp lệ (1900 - ${DateTime.now().year + 1})';
       }
     }
@@ -166,10 +168,16 @@ class VehicleProfileController extends GetxController {
     final expiryError = _validateExpiry(registrationExpiry.value, 'đăng ký xe');
     if (expiryError != null) return expiryError;
 
-    final insuranceExpiryError = _validateExpiry(insuranceExpiry.value, 'bảo hiểm');
+    final insuranceExpiryError = _validateExpiry(
+      insuranceExpiry.value,
+      'bảo hiểm',
+    );
     if (insuranceExpiryError != null) return insuranceExpiryError;
 
-    final licenseExpiryError = _validateExpiry(driverLicenseExpiry.value, 'GPLX');
+    final licenseExpiryError = _validateExpiry(
+      driverLicenseExpiry.value,
+      'GPLX',
+    );
     if (licenseExpiryError != null) return licenseExpiryError;
 
     return null;
@@ -179,7 +187,9 @@ class VehicleProfileController extends GetxController {
   DateTime? _parseDdMmYyyy(String input) {
     final trimmed = input.trim();
     // Hỗ trợ cả dấu "/" và "-"
-    final parts = trimmed.contains('/') ? trimmed.split('/') : trimmed.split('-');
+    final parts = trimmed.contains('/')
+        ? trimmed.split('/')
+        : trimmed.split('-');
     if (parts.length != 3) return null;
 
     final day = int.tryParse(parts[0]);
@@ -232,8 +242,11 @@ class VehicleProfileController extends GetxController {
         brand: brand.value.trim().isNotEmpty ? brand.value.trim() : null,
         model: model.value.trim().isNotEmpty ? model.value.trim() : null,
         color: color.value.trim().isNotEmpty ? color.value.trim() : null,
-        year: year.value.trim().isNotEmpty ? int.tryParse(year.value.trim()) : null,
-        seatCount: vehicleType.value == 'Car' && seatCount.value.trim().isNotEmpty
+        year: year.value.trim().isNotEmpty
+            ? int.tryParse(year.value.trim())
+            : null,
+        seatCount:
+            vehicleType.value == 'Car' && seatCount.value.trim().isNotEmpty
             ? int.tryParse(seatCount.value.trim())
             : null,
         vehiclePhoto: vehiclePhoto.value.isNotEmpty ? vehiclePhoto.value : null,
@@ -259,8 +272,12 @@ class VehicleProfileController extends GetxController {
       );
 
       final driverInfo = DriverProfileInfo(
-        fullName: fullName.value.trim().isNotEmpty ? fullName.value.trim() : null,
-        phoneNumber: phoneNumber.value.trim().isNotEmpty ? phoneNumber.value.trim() : null,
+        fullName: fullName.value.trim().isNotEmpty
+            ? fullName.value.trim()
+            : null,
+        phoneNumber: phoneNumber.value.trim().isNotEmpty
+            ? phoneNumber.value.trim()
+            : null,
         avatar: avatar.value.isNotEmpty ? avatar.value : null,
         driverLicenseNumber: driverLicenseNumber.value.trim().isNotEmpty
             ? driverLicenseNumber.value.trim()
@@ -327,8 +344,11 @@ class VehicleProfileController extends GetxController {
       );
     } catch (e) {
       errorMessage.value = 'Lỗi khi lưu: $e';
-      Get.snackbar('Lỗi', 'Không thể lưu thông tin: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Lỗi',
+        'Không thể lưu thông tin: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
       debugPrint('[VehicleProfileController] saveProfile error: $e');
     } finally {
       isSaving.value = false;
@@ -364,7 +384,9 @@ class VehicleProfileController extends GetxController {
       _setImageUrl(imageType, url);
       uploadingImages[imageType] = false;
 
-      debugPrint('[VehicleProfileController] Upload $imageType thành công: $url');
+      debugPrint(
+        '[VehicleProfileController] Upload $imageType thành công: $url',
+      );
     } catch (e) {
       uploadingImages[imageType] = false;
       Get.snackbar('Lỗi', 'Không thể upload ảnh: $e');

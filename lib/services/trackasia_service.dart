@@ -109,4 +109,92 @@ class TrackAsiaService {
     }
     return null;
   }
+
+  /// Alias for autocomplete but returning List<Map> for Controller compatibility
+  Future<List<Map<String, dynamic>>> searchPlace(String query) async {
+    final places = await autocomplete(query);
+    return places.map((p) => {
+      'display_name': p.label,
+      'lat': p.latitude,
+      'lon': p.longitude,
+      'name': p.name,
+    }).toList();
+  }
+
+  /// Get routing points and info between two coordinates
+  Future<Map<String, dynamic>> getRoute(double startLat, double startLon, double endLat, double endLon) async {
+    // 1. Thử dùng TrackAsia trước
+    final trackAsiaUrl = Uri.parse('https://maps.track-asia.com/api/v1/routing?point=$startLat,$startLon&point=$endLat,$endLon&key=$_apiKey&vehicle=car&points_encoded=true');
+
+    try {
+      final response = await http.get(trackAsiaUrl);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['paths'] != null && (data['paths'] as List).isNotEmpty) {
+          final route = data['paths'][0];
+          return {
+            'points': _decodePolyline(route['points']),
+            'distance': (route['distance'] as num).toDouble() / 1000,
+            'duration': (route['time'] as num).toDouble() / 60000,
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint('TrackAsia Route Error, switching to OSRM: $e');
+    }
+
+    // 2. Nếu TrackAsia lỗi, dùng OSRM làm dự phòng (Rất ổn định)
+    final osrmUrl = Uri.parse('https://router.project-osrm.org/route/v1/driving/$startLon,$startLat;$endLon,$endLat?overview=full&geometries=polyline');
+    
+    try {
+      final response = await http.get(osrmUrl);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && (data['routes'] as List).isNotEmpty) {
+          final route = data['routes'][0];
+          return {
+            'points': _decodePolyline(route['geometry']),
+            'distance': (route['distance'] as num).toDouble() / 1000,
+            'duration': (route['duration'] as num).toDouble() / 60,
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint('OSRM Route Error: $e');
+    }
+
+    return {'points': [], 'distance': 0.0, 'duration': 0.0};
+  }
+
+  List<dynamic> _decodePolyline(String encoded) {
+    // Basic Polyline Decoder
+    List<dynamic> points = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      // Using generic object for points, usually converted to LatLng in controller
+      points.add({'lat': lat / 1E5, 'lon': lng / 1E5});
+    }
+    return points;
+  }
 }

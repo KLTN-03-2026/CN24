@@ -35,7 +35,9 @@ class DriverLocationModel {
       longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
       isOnline: map['isOnline'] ?? false,
       isAvailable: map['isAvailable'] ?? false,
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      updatedAt: map['updatedAt'] != null 
+          ? (map['updatedAt'] as Timestamp).toDate() 
+          : DateTime.now(),
     );
   }
 }

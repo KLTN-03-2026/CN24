@@ -102,4 +102,46 @@ class RideRequestModel {
       paymentMethod: map['paymentMethod'] ?? 'Tiền mặt',
     );
   }
+
+  RideRequestModel copyWith({
+    String? id,
+    String? customerId,
+    String? customerName,
+    String? pickupAddress,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    String? destinationAddress,
+    double? destinationLatitude,
+    double? destinationLongitude,
+    String? driverId,
+    double? distanceInKm,
+    RideStatus? status,
+    DateTime? createdAt,
+    double? fare,
+    String? driverPhone,
+    String? driverName,
+    String? customerPhone,
+    String? paymentMethod,
+  }) {
+    return RideRequestModel(
+      id: id ?? this.id,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
+      pickupAddress: pickupAddress ?? this.pickupAddress,
+      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
+      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
+      destinationAddress: destinationAddress ?? this.destinationAddress,
+      destinationLatitude: destinationLatitude ?? this.destinationLatitude,
+      destinationLongitude: destinationLongitude ?? this.destinationLongitude,
+      driverId: driverId ?? this.driverId,
+      distanceInKm: distanceInKm ?? this.distanceInKm,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      fare: fare ?? this.fare,
+      driverPhone: driverPhone ?? this.driverPhone,
+      driverName: driverName ?? this.driverName,
+      customerPhone: customerPhone ?? this.customerPhone,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+    );
+  }
 }

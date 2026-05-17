@@ -82,4 +82,38 @@ class AppTheme {
       bodyMedium: TextStyle(color: darkTextSoft),
     ),
   );
+
+  // Decorations for Home UI
+  static BoxDecoration homeCardDecoration(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return BoxDecoration(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: isDark ? Colors.black26 : Colors.black.withOpacity(0.05),
+          blurRadius: 15,
+          offset: const Offset(0, 5),
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration searchFieldDecoration(BuildContext context) {
+    final theme = Theme.of(context);
+    return BoxDecoration(
+      color: theme.brightness == Brightness.dark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+      borderRadius: BorderRadius.circular(12),
+    );
+  }
+
+  static InputDecoration searchInputDecoration(BuildContext context, String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+      border: InputBorder.none,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+    );
+  }
 }

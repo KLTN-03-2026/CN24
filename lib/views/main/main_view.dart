@@ -82,6 +82,7 @@ class _MainViewState extends State<MainView> {
       body: IndexedStack(index: _currentIndex, children: _screens),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: FloatingActionButton(
+        heroTag: 'chatbot_fab', // Added unique tag
         onPressed: () => Get.to(() => const ChatBotView()),
         backgroundColor: const Color(0xFF1565C0),
         child: const Icon(Icons.smart_toy_rounded, color: Colors.white),
