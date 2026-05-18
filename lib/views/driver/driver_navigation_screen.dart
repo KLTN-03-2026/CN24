@@ -321,9 +321,8 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                  userAgentPackageName: 'com.ridenow.app',
-                  subdomains: const ['a', 'b', 'c', 'd'],
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'vn.khoaluan.ridenow.mobileapp.v1',
                 ),
                 // Layer Polyline
                 PolylineLayer(

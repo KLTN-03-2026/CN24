@@ -40,18 +40,18 @@ class AIService {
         body: jsonEncode({
           'message': message,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data['reply'] ?? 'Lỗi: Server không trả về nội dung.';
+        return data['reply'] ?? 'FALLBACK_TRIGGER';
       } else {
         print('AIService Server Error: ${response.statusCode}');
-        return 'Xin lỗi, máy chủ Chatbot đang gặp sự cố (Lỗi ${response.statusCode}).';
+        return 'FALLBACK_TRIGGER';
       }
     } catch (e) {
       print('AIService Connection Error: $e');
-      return 'Không thể kết nối đến máy chủ Chatbot. Hãy chắc chắn rằng bạn đã chạy Server Python!';
+      return 'FALLBACK_TRIGGER';
     }
   }
 

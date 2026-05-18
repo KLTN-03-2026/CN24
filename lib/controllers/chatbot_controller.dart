@@ -96,11 +96,13 @@ Bạn là **RideNow Assistant** — trợ lý AI thông minh của ứng dụng 
     }
 
     // Tin nhắn chào mừng
-    messages.add(ChatMessage(
-      text:
-          'Xin chào! 👋 Tôi là **RideNow Assistant**, trợ lý AI của bạn.\n\nTôi có thể giúp bạn về:\n🚗 Đặt xe\n💰 Giá cước\n❌ Hủy chuyến\n💳 Thanh toán\n🚨 Khiếu nại\n👤 Tài khoản\n🛡️ An toàn\n\nBạn cần hỗ trợ gì?',
-      isUser: false,
-    ));
+    messages.add(
+      ChatMessage(
+        text:
+            'Xin chào! 👋 Tôi là **RideNow Assistant**, trợ lý AI của bạn.\n\nTôi có thể giúp bạn về:\n🚗 Đặt xe\n💰 Giá cước\n❌ Hủy chuyến\n💳 Thanh toán\n🚨 Khiếu nại\n👤 Tài khoản\n🛡️ An toàn\n\nBạn cần hỗ trợ gì?',
+        isUser: false,
+      ),
+    );
   }
 
   /// Gửi tin nhắn
@@ -130,6 +132,9 @@ Bạn là **RideNow Assistant** — trợ lý AI thông minh của ứng dụng 
     String response;
     if (_aiService.isInitialized) {
       response = await _aiService.sendMessage(userMessage);
+      if (response == 'FALLBACK_TRIGGER') {
+        response = _getFallbackResponse(userMessage);
+      }
     } else {
       response = _getFallbackResponse(userMessage);
     }
@@ -175,7 +180,9 @@ Bạn là **RideNow Assistant** — trợ lý AI thông minh của ứng dụng 
     if (lower.contains('đặt xe') || lower.contains('dat xe')) {
       return '🚗 **Cách đặt xe:**\n1. Nhập điểm đón và điểm đến\n2. Xem giá cước dự kiến\n3. Nhấn "Đặt xe"\n4. Đợi tài xế nhận chuyến\n\nRất đơn giản! Bạn cần hỗ trợ thêm gì không?';
     }
-    if (lower.contains('giá') || lower.contains('cước') || lower.contains('gia')) {
+    if (lower.contains('giá') ||
+        lower.contains('cước') ||
+        lower.contains('gia')) {
       return '💰 **Giá cước RideNow:**\n• 5.000đ/km\n• Phí tối thiểu: 15.000đ/chuyến\n• Giá hiển thị trên app là giá cuối cùng\n\nVí dụ: Chuyến 5km = 25.000đ';
     }
     if (lower.contains('hủy') || lower.contains('huy')) {
@@ -184,10 +191,14 @@ Bạn là **RideNow Assistant** — trợ lý AI thông minh của ứng dụng 
     if (lower.contains('thanh toán') || lower.contains('trả tiền')) {
       return '💳 Hiện tại RideNow hỗ trợ **thanh toán tiền mặt** — trả trực tiếp cho tài xế khi kết thúc chuyến.';
     }
-    if (lower.contains('khiếu nại') || lower.contains('report')) {
+    if (lower.contains('khiếu nại') ||
+        lower.contains('report') ||
+        lower.contains('khieu nai')) {
       return '🚨 Để khiếu nại, bạn có thể đánh giá sao sau chuyến đi hoặc liên hệ hotline **1900-xxxx**.';
     }
-    if (lower.contains('tài khoản') || lower.contains('mật khẩu') || lower.contains('đăng ký')) {
+    if (lower.contains('tài khoản') ||
+        lower.contains('mật khẩu') ||
+        lower.contains('đăng ký')) {
       return '👤 **Hỗ trợ tài khoản:**\n• Đăng ký bằng email\n• Quên mật khẩu → dùng "Quên mật khẩu"\n• Đổi MK → Hồ sơ → Đổi mật khẩu';
     }
     if (lower.contains('an toàn') || lower.contains('bảo hiểm')) {

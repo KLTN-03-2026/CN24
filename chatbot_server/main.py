@@ -42,22 +42,27 @@ def get_intent_response(text: str) -> str:
     return "🤔 Xin lỗi, tôi chưa hiểu rõ ý bạn. Bạn có thể hỏi về: Cách đặt xe, Giá cước, Hủy chuyến, Thanh toán hoặc Khiếu nại không?"
 
 class ChatbotHandler(BaseHTTPRequestHandler):
-    def _set_headers(self, status_code=200):
+    def _set_headers(self, status_code=200, content_length=None):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
+        self.send_header('Connection', 'close')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        if content_length is not None:
+            self.send_header('Content-Length', str(content_length))
         self.end_headers()
+        self.close_connection = True
 
     def do_OPTIONS(self):
         self._set_headers()
 
     def do_GET(self):
         if self.path == '/':
-            self._set_headers()
             response = {"message": "RideNow Rule-based Chatbot Server is running!"}
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+            response_data = json.dumps(response).encode('utf-8')
+            self._set_headers(200, len(response_data))
+            self.wfile.write(response_data)
         else:
             self.send_response(404)
             self.end_headers()
@@ -73,20 +78,23 @@ class ChatbotHandler(BaseHTTPRequestHandler):
                 # Lấy phản hồi từ bộ quy tắc
                 reply = get_intent_response(user_message)
                 
-                self._set_headers()
                 response = {
                     "reply": reply,
                     "status": "success"
                 }
-                self.wfile.write(json.dumps(response).encode('utf-8'))
+                response_data = json.dumps(response).encode('utf-8')
+                self._set_headers(200, len(response_data))
+                self.wfile.write(response_data)
             except Exception as e:
-                self._set_headers(400)
                 response = {"error": str(e)}
-                self.wfile.write(json.dumps(response).encode('utf-8'))
+                response_data = json.dumps(response).encode('utf-8')
+                self._set_headers(400, len(response_data))
+                self.wfile.write(response_data)
         elif self.path == '/api/reset':
-            self._set_headers()
             response = {"status": "success", "message": "Chatbot reset"}
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+            response_data = json.dumps(response).encode('utf-8')
+            self._set_headers(200, len(response_data))
+            self.wfile.write(response_data)
         else:
             self.send_response(404)
             self.end_headers()

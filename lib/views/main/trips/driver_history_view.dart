@@ -20,7 +20,7 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
   final _rideRepository = RideRepository();
   final _authController = Get.find<AuthController>();
   String _selectedFilter = 'Tất cả';
-  final List<String> _filters = ['Tất cả', 'Completed', 'Cancelled'];
+  final List<String> _filters = ['Tất cả', 'Completed', 'Cancelled', 'Ongoing'];
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +35,7 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          'trip_history'.tr,
-          style: theme.appBarTheme.titleTextStyle,
-        ),
+        title: Text('trip_history'.tr, style: theme.appBarTheme.titleTextStyle),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
       ),
@@ -120,33 +117,33 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
                   itemBuilder: (context, index) {
                     final filter = _filters[index];
                     final isSelected = _selectedFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(filter.tr),
-                          selected: isSelected,
-                          onSelected: (val) =>
-                              setState(() => _selectedFilter = filter),
-                          backgroundColor: theme.cardColor,
-                          selectedColor: theme.primaryColor.withOpacity(0.1),
-                          labelStyle: TextStyle(
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(filter.tr),
+                        selected: isSelected,
+                        onSelected: (val) =>
+                            setState(() => _selectedFilter = filter),
+                        backgroundColor: theme.cardColor,
+                        selectedColor: theme.primaryColor.withOpacity(0.1),
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? theme.primaryColor
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                        shape: StadiumBorder(
+                          side: BorderSide(
                             color: isSelected
                                 ? theme.primaryColor
-                                : theme.colorScheme.onSurfaceVariant,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                                : theme.dividerColor.withOpacity(0.1),
                           ),
-                          shape: StadiumBorder(
-                            side: BorderSide(
-                              color: isSelected
-                                  ? theme.primaryColor
-                                  : theme.dividerColor.withOpacity(0.1),
-                            ),
-                          ),
-                          showCheckmark: false,
                         ),
-                      );
+                        showCheckmark: false,
+                      ),
+                    );
                   },
                 ),
               ),
@@ -230,7 +227,10 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
             const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 4),
             FittedBox(

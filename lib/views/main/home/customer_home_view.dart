@@ -36,9 +36,8 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
                   TileLayer(
                     urlTemplate: isDark 
                         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                    userAgentPackageName: 'com.ridenow.app',
-                    subdomains: const ['a', 'b', 'c', 'd'],
+                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'vn.khoaluan.ridenow.mobileapp.v1',
                   ),
                   Obx(() {
                     final points = controller.routePoints;
