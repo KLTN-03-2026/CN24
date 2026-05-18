@@ -76,6 +76,13 @@ class MatchingService {
 
       // 4. Lần lượt mời các tài xế
       for (var driver in driversWithDistance) {
+        // KIỂM TRA TRƯỚC MỖI LẦN MỜI: Xem chuyến đi đã bị hủy chưa
+        final currentRequest = await _rideRepository.getRideRequest(request.id);
+        if (currentRequest == null || currentRequest.status == RideStatus.cancelled) {
+          print('DEBUG: [MatchingService] Dừng tìm kiếm vì chuyến đi đã bị hủy hoặc không tồn tại.');
+          return;
+        }
+
         final driverId = driver['driverId'];
         print('DEBUG: [MatchingService] Đang kiểm tra trạng thái và mời tài xế: $driverId...');
         bool result = await _tryAssignDriver(request.id, driverId, driver['distance']);
@@ -150,6 +157,10 @@ class MatchingService {
         subscription?.cancel();
       } else if (updatedRequest.status == RideStatus.rejected) {
         print('DEBUG: [MatchingService] Tài xế $driverId đã trả lời: TỪ CHỐI');
+        if (!responseCompleter.isCompleted) responseCompleter.complete(false);
+        subscription?.cancel();
+      } else if (updatedRequest.status == RideStatus.cancelled) {
+        print('DEBUG: [MatchingService] Khách hàng đã hủy chuyến xe. Dừng chờ tài xế.');
         if (!responseCompleter.isCompleted) responseCompleter.complete(false);
         subscription?.cancel();
       }

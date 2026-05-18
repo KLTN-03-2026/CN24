@@ -164,13 +164,22 @@ class _RideNowLoginScreenState extends State<LoginView> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        TextField(
+                        TextFormField(
                           controller: emailController,
                           keyboardType: TextInputType.emailAddress,
                           decoration: _fieldDecoration(
                             hint: 'name@example.com',
                             icon: Icons.mail_outline_rounded,
                           ),
+                          validator: (value) {
+                            if (value?.isEmpty ?? true) {
+                              return 'Please enter your email';
+                            }
+                            if (!GetUtils.isEmail(value!)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
                         ),
 
                         const SizedBox(height: 14),
@@ -183,7 +192,7 @@ class _RideNowLoginScreenState extends State<LoginView> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        TextField(
+                        TextFormField(
                           controller: passController,
                           obscureText: _hidePass,
                           decoration: _fieldDecoration(
@@ -200,6 +209,15 @@ class _RideNowLoginScreenState extends State<LoginView> {
                               ),
                             ),
                           ),
+                          validator: (value) {
+                            if (value?.isEmpty ?? true) {
+                              return 'Please enter your password';
+                            }
+                            if (value!.length < 6) {
+                              return 'Mật khẩu phải hơn 6 kí tự';
+                            }
+                            return null;
+                          },
                         ),
 
                         const SizedBox(height: 10),
@@ -281,7 +299,7 @@ class _RideNowLoginScreenState extends State<LoginView> {
                           children: [
                             TextButton(
                               onPressed: () {
-                                print("click sin up");
+                                print("click sign up");
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(

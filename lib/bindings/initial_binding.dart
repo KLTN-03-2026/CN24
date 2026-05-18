@@ -12,8 +12,8 @@ class InitialBinding extends Bindings {
     Get.put(AuthController(), permanent: true);
     
     // Lazy Controllers
-    Get.lazyPut(() => CustomerHomeController());
-    Get.lazyPut(() => DriverHomeController());
-    Get.lazyPut(() => VehicleProfileController());
+    Get.lazyPut(() => CustomerHomeController(), fenix: true);
+    Get.lazyPut(() => DriverHomeController(), fenix: true);
+    Get.lazyPut(() => VehicleProfileController(), fenix: true);
   }
 }

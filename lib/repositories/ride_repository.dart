@@ -226,7 +226,9 @@ class RideRepository {
               if (aTime == null || bTime == null) return 0;
               return bTime.compareTo(aTime);
             });
-            return RideRequestModel.fromMap(activeDocs.first.data() as Map<String, dynamic>);
+            final rideMap = activeDocs.first.data() as Map<String, dynamic>;
+            rideMap['id'] = activeDocs.first.id;
+            return RideRequestModel.fromMap(rideMap);
           }
 
           // 2. Nếu không thấy trong ride_requests, hãy kiểm tra collection 'trips' (phòng trường hợp đồng bộ chậm)
@@ -277,8 +279,9 @@ class RideRepository {
           if (aTime == null || bTime == null) return 0;
           return bTime.compareTo(aTime);
         });
-        return RideRequestModel.fromMap(
-            activeDocs.first.data() as Map<String, dynamic>);
+        final rideMap = activeDocs.first.data() as Map<String, dynamic>;
+        rideMap['id'] = activeDocs.first.id;
+        return RideRequestModel.fromMap(rideMap);
       }
 
       // 2. Nếu không thấy trong ride_requests, hãy kiểm tra collection 'trips'
@@ -309,9 +312,9 @@ class RideRepository {
 
   // Hoàn thành chuyến xe, cập nhật trip đã tồn tại và tạo thông báo đánh giá
   Future<void> completeRide(
-    String requestId,
-    Map<String, dynamic> updateData,
-  ) async {
+    String requestId, [
+    Map<String, dynamic>? updateData,
+  ]) async {
     final WriteBatch batch = _firestore.batch();
 
     // 1. Lấy thông tin chuyến xe để biết customerId và driverId
@@ -337,9 +340,15 @@ class RideRepository {
     final tripRef = _firestore.collection('trips').doc(requestId);
     final tripDoc = await tripRef.get();
 
+    final safeUpdateData = {
+      'status': 'completed',
+      'completedAt': Timestamp.fromDate(DateTime.now()),
+      ...?(updateData),
+    };
+
     if (tripDoc.exists) {
       // Trip đã tồn tại → chỉ update
-      batch.update(tripRef, updateData);
+      batch.update(tripRef, safeUpdateData);
     } else {
       // Trip chưa tồn tại → tạo mới từ dữ liệu ride_request
       debugPrint('[RideRepository] completeRide: Trip chưa tồn tại, tạo mới từ ride_request');
@@ -359,7 +368,7 @@ class RideRepository {
         'distance': rideData['distanceInKm'] ?? 0,
         'paymentMethod': rideData['paymentMethod'] ?? 'Tiền mặt',
         'createdAt': rideData['createdAt'] ?? Timestamp.fromDate(DateTime.now()),
-        ...updateData,
+        ...safeUpdateData,
       };
       batch.set(tripRef, tripData);
     }

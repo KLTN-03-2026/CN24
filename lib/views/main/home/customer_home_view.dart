@@ -24,17 +24,21 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
               color: theme.scaffoldBackgroundColor,
               child: FlutterMap(
                 mapController: controller.mapController,
-                options: const MapOptions(
-                  initialCenter: LatLng(16.0544, 108.2022),
+                options: MapOptions(
+                  initialCenter: const LatLng(16.0544, 108.2022),
                   initialZoom: 13,
+                  onTap: (tapPosition, point) {
+                    FocusScope.of(context).unfocus();
+                    controller.searchResults.clear();
+                  },
                 ),
                 children: [
                   TileLayer(
                     urlTemplate: isDark 
                         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.ride_now_khoaluan',
-                    subdomains: isDark ? const ['a', 'b', 'c', 'd'] : const [],
+                        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                    userAgentPackageName: 'com.ridenow.app',
+                    subdomains: const ['a', 'b', 'c', 'd'],
                   ),
                   Obx(() {
                     final points = controller.routePoints;
@@ -161,8 +165,14 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
         onPressed: () {
           if (txtController.text.isNotEmpty) {
             txtController.clear();
-            if (isPickup) controller.searchedPickupLocation.value = null;
-            else controller.searchedLocation.value = null;
+            controller.searchResults.clear();
+            controller.routePoints.clear();
+            if (isPickup) {
+              controller.searchedPickupLocation.value = null;
+              controller.pickupAddress.value = 'current_location'.tr;
+            } else {
+              controller.searchedLocation.value = null;
+            }
           }
         },
       );
@@ -171,7 +181,10 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
 
   Widget _buildSearchResults(BuildContext context) {
     return Obx(() {
-      if (controller.searchResults.isEmpty) return const SizedBox.shrink();
+      if (controller.searchResults.isEmpty ||
+          controller.activeRide.value != null) {
+        return const SizedBox.shrink();
+      }
       return Container(
         margin: const EdgeInsets.only(top: 10),
         constraints: const BoxConstraints(maxHeight: 200),
@@ -281,7 +294,7 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
     final theme = Theme.of(context);
     final distance = controller.previewDistance.value ?? 0.0;
     final duration = controller.previewDuration.value ?? 0.0;
-    final price = distance * 15000;
+    final price = distance * 5000;
 
     return Column(
       children: [
@@ -409,7 +422,14 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
       final ride = controller.activeRide.value;
       if (ride == null) return const SizedBox.shrink();
       
-      final isAccepted = ride.status != RideStatus.searching_driver && ride.status != RideStatus.pending;
+      final isAccepted = ride.status != RideStatus.searching_driver && 
+          ride.status != RideStatus.pending && 
+          ride.status != RideStatus.driver_assigned;
+      
+      if (!isAccepted) {
+        return _buildSearchingDriverUI(context, ride);
+      }
+      
       final driver = controller.assignedDriver.value;
 
       return Column(
@@ -470,6 +490,133 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
         ],
       );
     });
+  }
+
+  Widget _buildSearchingDriverUI(BuildContext context, RideRequestModel ride) {
+    final theme = Theme.of(context);
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Green spinning progress indicator
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2ECC71)),
+                strokeWidth: 4.5,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        
+        // Centered Bold Text
+        const Text(
+          'Đang tìm tài xế gần bạn...',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        // Rounded Route Addresses Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.withOpacity(0.15)),
+          ),
+          child: Column(
+            children: [
+              // Pickup Address
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      ride.pickupAddress,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              // Vertical Connector Line
+              Padding(
+                padding: const EdgeInsets.only(left: 7.5),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 1.5,
+                    height: 22,
+                    color: Colors.grey.withOpacity(0.3),
+                  ),
+                ),
+              ),
+              // Destination Address
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, color: Colors.red, size: 18),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      ride.destinationAddress,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 25),
+        
+        // Cancel Request Button
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: OutlinedButton(
+            onPressed: controller.cancelActiveRide,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              foregroundColor: Colors.redAccent,
+            ),
+            child: const Text(
+              'Hủy yêu cầu',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
   }
 
   Widget _buildSimpleStat(IconData icon, String label, Color color) {

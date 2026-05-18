@@ -1,4 +1,6 @@
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_now_khoaluan/controllers/auth_controller.dart';
 import 'package:ride_now_khoaluan/models/ride_request_model.dart';
@@ -20,7 +22,7 @@ class DriverHomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
+
     // Sync online status with userModel
     ever(_authController.userModelRx, (user) {
       if (user != null) {
@@ -55,13 +57,15 @@ class DriverHomeController extends GetxController {
     _locationService.startDriverLocationUpdates(driverId);
 
     _requestSubscription?.cancel();
-    _requestSubscription = _rideRepository.watchIncomingRequests(driverId).listen((requests) {
-      if (requests.isNotEmpty) {
-        currentRequest.value = requests.first;
-      } else {
-        currentRequest.value = null;
-      }
-    });
+    _requestSubscription = _rideRepository
+        .watchIncomingRequests(driverId)
+        .listen((requests) {
+          if (requests.isNotEmpty) {
+            currentRequest.value = requests.first;
+          } else {
+            currentRequest.value = null;
+          }
+        });
   }
 
   void _stopDriverServices() {
@@ -72,7 +76,9 @@ class DriverHomeController extends GetxController {
 
   void _startWatchingActiveRide(String driverId) {
     _activeRideSubscription?.cancel();
-    _activeRideSubscription = _rideRepository.watchActiveRide(driverId).listen((ride) {
+    _activeRideSubscription = _rideRepository.watchActiveRide(driverId).listen((
+      ride,
+    ) {
       activeRide.value = ride;
     });
   }
@@ -83,10 +89,15 @@ class DriverHomeController extends GetxController {
 
     final newStatus = !isOnline.value;
     try {
-      await _rideRepository.updateDriverOnlineStatus(user.id, newStatus);
+      await _authController.updateUserStatus(
+        isOnline: newStatus,
+        isAvailable: newStatus,
+      );
       isOnline.value = newStatus;
-      if (newStatus) _startDriverServices();
-      else _stopDriverServices();
+      if (newStatus)
+        _startDriverServices();
+      else
+        _stopDriverServices();
     } catch (e) {
       Get.snackbar('Lỗi', 'Không thể cập nhật trạng thái: $e');
     }
@@ -94,7 +105,12 @@ class DriverHomeController extends GetxController {
 
   Future<void> acceptRide(String rideId) async {
     try {
-      await _rideRepository.updateRideStatus(rideId, RideStatus.accepted, driverId: _authController.userModel!.id, driverName: _authController.userModel!.name);
+      await _rideRepository.updateRideStatus(
+        rideId,
+        RideStatus.accepted,
+        driverId: _authController.userModel!.id,
+        driverName: _authController.userModel!.name,
+      );
       currentRequest.value = null;
     } catch (e) {
       Get.snackbar('Lỗi', 'Chấp nhận chuyến xe thất bại: $e');
@@ -107,6 +123,30 @@ class DriverHomeController extends GetxController {
       currentRequest.value = null;
     } catch (e) {
       Get.snackbar('Lỗi', 'Từ chối chuyến xe thất bại: $e');
+    }
+  }
+
+  Future<void> completeActiveRide() async {
+    final ride = activeRide.value;
+    if (ride == null) return;
+
+    try {
+      await _rideRepository.completeRide(ride.id);
+
+      final fare = ride.fare ?? 0.0;
+      await _authController.completeRide(fare);
+
+      await _authController.updateUserStatus(isOnline: true, isAvailable: true);
+      activeRide.value = null;
+
+      Get.snackbar(
+        'Thành công',
+        'Chuyến đi đã hoàn thành! Bạn đã sẵn sàng nhận chuyến mới.',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Lỗi', 'Không thể hoàn thành chuyến đi: $e');
     }
   }
 }
