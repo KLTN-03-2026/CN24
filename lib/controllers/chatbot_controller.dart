@@ -84,8 +84,6 @@ Bạn là **RideNow Assistant** — trợ lý AI thông minh của ứng dụng 
 
   @override
   void onClose() {
-    textController.dispose();
-    scrollController.dispose();
     super.onClose();
   }
 

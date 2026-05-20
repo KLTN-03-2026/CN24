@@ -83,7 +83,11 @@ class AuthController extends GetxController {
           currentRoute == AppRoutes.register ||
           currentRoute == AppRoutes.splash ||
           currentRoute == AppRoutes.onboarding) {
-        Get.offAllNamed(AppRoutes.main);
+        if (!user.emailVerified) {
+          Get.offAllNamed(AppRoutes.verifyEmail);
+        } else {
+          Get.offAllNamed(AppRoutes.main);
+        }
       }
     });
   }
@@ -99,6 +103,7 @@ class AuthController extends GetxController {
         password,
       );
       userModelRx.value = userModel;
+      userModelRx.bindStream(_authService.watchUserModel(userModel.id));
 
       // In ra Role của người dùng vừa đăng nhập
       debugPrint('====================================');
@@ -112,8 +117,13 @@ class AuthController extends GetxController {
         'Đăng nhập thành công với quyền ${userModel.role.name}!',
       );
 
-      // Navigate to main screen
-      await Get.offAllNamed(AppRoutes.main);
+      // Navigate to main screen or verify email
+      final currentUser = _authService.currentUser;
+      if (currentUser != null && !currentUser.emailVerified) {
+        await Get.offAllNamed(AppRoutes.verifyEmail);
+      } else {
+        await Get.offAllNamed(AppRoutes.main);
+      }
     } catch (e) {
       _error.value = e.toString();
       Get.snackbar('Đăng nhập thất bại', 'Sai email hoặc mật khẩu.');
@@ -150,13 +160,17 @@ class AuthController extends GetxController {
         throw Exception('Registration failed: User model is null.');
       }
 
+      // Gửi email xác nhận
+      await _authService.sendEmailVerification();
+
       // Set userModel before unlocking to avoid race condition
       userModelRx.value = userModel;
+      userModelRx.bindStream(_authService.watchUserModel(userModel.id));
 
-      Get.snackbar('Thành công', 'Đăng ký thành công!');
+      Get.snackbar('Thành công', 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.');
 
-      // Navigate to main screen
-      await Get.offAllNamed(AppRoutes.main);
+      // Navigate to verify email screen
+      await Get.offAllNamed(AppRoutes.verifyEmail);
     } catch (e) {
       _error.value = e.toString();
       debugPrint('[Register Error] $e');

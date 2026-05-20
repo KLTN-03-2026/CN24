@@ -15,6 +15,7 @@ class DriverHomeController extends GetxController {
   var isOnline = false.obs;
   var currentRequest = Rxn<RideRequestModel>();
   var activeRide = Rxn<RideRequestModel>();
+  var isLoading = false.obs;
 
   StreamSubscription? _requestSubscription;
   StreamSubscription? _activeRideSubscription;
@@ -104,6 +105,8 @@ class DriverHomeController extends GetxController {
   }
 
   Future<void> acceptRide(String rideId) async {
+    if (isLoading.value) return;
+    isLoading.value = true;
     try {
       await _rideRepository.updateRideStatus(
         rideId,
@@ -114,22 +117,30 @@ class DriverHomeController extends GetxController {
       currentRequest.value = null;
     } catch (e) {
       Get.snackbar('Lỗi', 'Chấp nhận chuyến xe thất bại: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
   Future<void> declineRide(String rideId) async {
+    if (isLoading.value) return;
+    isLoading.value = true;
     try {
       await _rideRepository.declineRide(rideId, _authController.userModel!.id);
       currentRequest.value = null;
     } catch (e) {
       Get.snackbar('Lỗi', 'Từ chối chuyến xe thất bại: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
   Future<void> completeActiveRide() async {
+    if (isLoading.value) return;
     final ride = activeRide.value;
     if (ride == null) return;
 
+    isLoading.value = true;
     try {
       await _rideRepository.completeRide(ride.id);
 
@@ -147,6 +158,8 @@ class DriverHomeController extends GetxController {
       );
     } catch (e) {
       Get.snackbar('Lỗi', 'Không thể hoàn thành chuyến đi: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 }

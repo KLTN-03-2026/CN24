@@ -38,6 +38,13 @@ class CustomerHomeController extends GetxController {
   var searchedLocation = Rxn<LatLng>();
   var pickupAddress = 'current_location'.tr.obs;
   var searchResults = <Map<String, dynamic>>[].obs;
+  int _searchRequestId = 0;
+
+  void clearSearchResults() {
+    _searchRequestId++;
+    searchResults.clear();
+  }
+
   var isLoading = false.obs;
   var isFetchingInfo = false.obs;
   var isRouting = false.obs;
@@ -74,8 +81,6 @@ class CustomerHomeController extends GetxController {
   void onClose() {
     _driverLocationSubscription?.cancel();
     _rideRequestSubscription?.cancel();
-    pickupController.dispose();
-    destinationController.dispose();
     _debounce?.cancel();
     super.onClose();
   }
@@ -159,14 +164,20 @@ class CustomerHomeController extends GetxController {
   void onSearchChanged(String query, bool isPickup) {
     isSearchingPickup.value = isPickup;
     if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    _searchRequestId++;
+    final currentRequestId = _searchRequestId;
+
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       if (query.isEmpty) {
-        searchResults.clear();
+        clearSearchResults();
         return;
       }
       try {
         final results = await _trackAsiaService.searchPlace(query);
-        searchResults.assignAll(results);
+        if (_searchRequestId == currentRequestId) {
+          searchResults.assignAll(results);
+        }
       } catch (e) {
         print('Error searching: $e');
       }
@@ -190,7 +201,7 @@ class CustomerHomeController extends GetxController {
       destinationController.text = address;
     }
 
-    searchResults.clear();
+    clearSearchResults();
     mapController.move(pos, 15);
 
     // Chỉ cần có điểm đến (hoặc điểm đón mới) là tính toán đường đi ngay
@@ -272,6 +283,8 @@ class CustomerHomeController extends GetxController {
   }
 
   Future<void> handleBookRide() async {
+    if (isLoading.value) return;
+
     final start = searchedPickupLocation.value ?? currentLocation.value;
     final end = searchedLocation.value;
     if (start == null || end == null) return;
@@ -344,6 +357,8 @@ class CustomerHomeController extends GetxController {
       '${(amount / 1000).toStringAsFixed(0)}.000đ';
 
   Future<void> cancelActiveRide() async {
+    if (isLoading.value) return;
+
     final ride = activeRide.value;
     if (ride == null) return;
 

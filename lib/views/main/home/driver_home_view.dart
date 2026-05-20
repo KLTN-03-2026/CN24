@@ -207,8 +207,8 @@ class DriverHomeScreen extends GetView<DriverHomeController> {
                   } else if (currentRequest != null) {
                     return RideRequestCard(
                       request: currentRequest,
-                      onAccept: () => controller.acceptRide(currentRequest.id),
-                      onDecline: () => controller.declineRide(currentRequest.id),
+                      onAccept: controller.isLoading.value ? null : () => controller.acceptRide(currentRequest.id),
+                      onDecline: controller.isLoading.value ? null : () => controller.declineRide(currentRequest.id),
                     );
                   } else {
                     return const SizedBox.shrink();
@@ -523,21 +523,29 @@ class DriverHomeScreen extends GetView<DriverHomeController> {
                     ),
                     const SizedBox(height: 12),
                     // Hoàn thành chuyến đi (Complete Ride)
-                    SizedBox(
+                    Obx(() => SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton.icon(
-                        onPressed: () => controller.completeActiveRide(),
-                        icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
-                        label: const Text(
-                          'Hoàn thành chuyến đi',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+                        onPressed: controller.isLoading.value ? null : () => controller.completeActiveRide(),
+                        icon: controller.isLoading.value 
+                            ? const SizedBox.shrink() 
+                            : const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
+                        label: controller.isLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text(
+                                'Hoàn thành chuyến đi',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           elevation: 2,
@@ -547,7 +555,7 @@ class DriverHomeScreen extends GetView<DriverHomeController> {
                           ),
                         ),
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ],

@@ -16,7 +16,7 @@ def get_intent_response(text: str) -> str:
         
     # 3. Giá cước
     if re.search(r'(giá|cước|bao nhiêu|tiền|phí|đắt)', text):
-        return "💰 **Giá cước RideNow:**\n- 5.000đ cho mỗi km.\n- Phí tối thiểu: 15.000đ/chuyến.\n- Giá hiển thị trên app là giá cuối cùng, cam kết không thu thêm phụ phí!"
+        return "💰 **Giá cước RideNow:**\n- 5.000đ cho mỗi km.\n- Giá hiển thị trên app là giá cuối cùng, cam kết không thu thêm phụ phí!"
         
     # 4. Hủy chuyến
     if re.search(r'(hủy|không đi nữa|đổi ý|huy chuyen)', text):

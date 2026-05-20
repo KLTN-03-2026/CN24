@@ -29,7 +29,7 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
                   initialZoom: 13,
                   onTap: (tapPosition, point) {
                     FocusScope.of(context).unfocus();
-                    controller.searchResults.clear();
+                    controller.clearSearchResults();
                   },
                 ),
                 children: [
@@ -164,7 +164,7 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
         onPressed: () {
           if (txtController.text.isNotEmpty) {
             txtController.clear();
-            controller.searchResults.clear();
+            controller.clearSearchResults();
             controller.routePoints.clear();
             if (isPickup) {
               controller.searchedPickupLocation.value = null;
@@ -338,13 +338,13 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
           ],
         ),
         const SizedBox(height: 25),
-        SizedBox(
+        Obx(() => SizedBox(
           width: double.infinity,
           height: 55,
           child: ElevatedButton.icon(
-            onPressed: controller.handleBookRide,
+            onPressed: controller.isLoading.value ? null : controller.handleBookRide,
             icon: const Icon(Icons.local_taxi, size: 24),
-            label: Obx(() => controller.isLoading.value 
+            label: controller.isLoading.value 
               ? const SizedBox(
                   width: 20, height: 20, 
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
@@ -353,7 +353,6 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
                   'book_ride_now'.tr,
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2ECC71), // Màu xanh lá như mẫu
               foregroundColor: Colors.white,
@@ -363,7 +362,7 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
               ),
             ),
           ),
-        ),
+        )),
       ],
     );
   }
@@ -485,6 +484,37 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
                 _buildSimpleStat(Icons.timer, '5 min', Colors.grey),
               ],
             ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton(
+                onPressed: controller.isLoading.value ? null : controller.cancelActiveRide,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  foregroundColor: Colors.redAccent,
+                ),
+                child: controller.isLoading.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.redAccent,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Hủy chuyến',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
           ],
         ],
       );
@@ -596,7 +626,7 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
           width: double.infinity,
           height: 52,
           child: OutlinedButton(
-            onPressed: controller.cancelActiveRide,
+            onPressed: controller.isLoading.value ? null : controller.cancelActiveRide,
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.redAccent, width: 1.5),
               shape: RoundedRectangleBorder(
@@ -604,13 +634,22 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
               ),
               foregroundColor: Colors.redAccent,
             ),
-            child: const Text(
-              'Hủy yêu cầu',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: controller.isLoading.value
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.redAccent,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Hủy yêu cầu',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ),
         const SizedBox(height: 10),
