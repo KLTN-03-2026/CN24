@@ -47,7 +47,7 @@ function ChartSection({ trips }) {
             <div
               className="mini-chart__bar mini-chart__bar--primary"
               style={{
-                height: `${Math.max((dayCounts[idx] / maxVal) * 100, 4)}%`,
+                height: `${Math.max((dayCounts[idx] / maxVal) * 100, 12)}%`,
               }}
               title={`${label}: ${dayCounts[idx]} chuyến`}
             />

@@ -10,6 +10,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -368,20 +369,20 @@ export async function syncDriverStats() {
     // 1. Lấy tất cả tài xế
     const driversQuery = query(collection(db, 'users'), where('role', '==', 'driver'));
     const driversSnapshot = await getDocs(driversQuery);
-    
+
     const results = [];
-    
+
     for (const driverDoc of driversSnapshot.docs) {
       const driverId = driverDoc.id;
-      
+
       // 2. Lấy tất cả chuyến đi của tài xế này (không lọc status ở query để tránh lỗi mismatch string)
       const tripsQuery = query(
-        collection(db, 'trips'), 
+        collection(db, 'trips'),
         where('driverId', '==', driverId)
       );
-      
+
       const tripsSnapshot = await getDocs(tripsQuery);
-      
+
       // Lọc các chuyến đã hoàn thành (chấp nhận cả 'completed' và 'Hoàn thành')
       const completedTrips = tripsSnapshot.docs.filter(t => {
         const s = t.data().status;
@@ -389,22 +390,22 @@ export async function syncDriverStats() {
       });
 
       const totalTrips = completedTrips.length;
-      
+
       // 3. Tính tổng thu nhập
       let earnings = 0;
       completedTrips.forEach(t => {
         earnings += (t.data().fare || 0);
       });
-      
+
       // 4. Cập nhật lại vào bảng users
       await updateDoc(doc(db, 'users', driverId), {
         totalTrips: totalTrips,
         earnings: earnings
       });
-      
+
       results.push({ name: driverDoc.data().name, totalTrips, earnings });
     }
-    
+
     return { success: true, updatedCount: results.length };
   } catch (error) {
     console.error('Error syncing driver stats:', error);
@@ -420,20 +421,20 @@ export async function syncCustomerStats() {
     // 1. Lấy tất cả khách hàng
     const customersQuery = query(collection(db, 'users'), where('role', '==', 'customer'));
     const customersSnapshot = await getDocs(customersQuery);
-    
+
     const results = [];
-    
+
     for (const customerDoc of customersSnapshot.docs) {
       const customerId = customerDoc.id;
-      
+
       // 2. Lấy tất cả chuyến đi của khách hàng này
       const tripsQuery = query(
-        collection(db, 'trips'), 
+        collection(db, 'trips'),
         where('customerId', '==', customerId)
       );
-      
+
       const tripsSnapshot = await getDocs(tripsQuery);
-      
+
       // Lọc các chuyến đã hoàn thành
       const completedTrips = tripsSnapshot.docs.filter(t => {
         const s = t.data().status;
@@ -441,15 +442,15 @@ export async function syncCustomerStats() {
       });
 
       const totalTrips = completedTrips.length;
-      
+
       // 3. Cập nhật lại vào bảng users
       await updateDoc(doc(db, 'users', customerId), {
         totalTrips: totalTrips
       });
-      
+
       results.push({ name: customerDoc.data().name, totalTrips });
     }
-    
+
     return { success: true, updatedCount: results.length };
   } catch (error) {
     console.error('Error syncing customer stats:', error);
@@ -613,7 +614,7 @@ export function onReviews(callback, maxResults = 100) {
   const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
     notifsData = snapshot.docs.map(doc => {
       const data = doc.data();
-      
+
       // Ưu tiên lấy từ trường rating có sẵn, nếu không mới parse từ string
       let rating = data.rating;
       if (rating === undefined || rating === null) {
@@ -636,8 +637,12 @@ export function onReviews(callback, maxResults = 100) {
         id: doc.id,
         rating: rating,
         comment: comment,
-        customerName: data.customerName || 'Khách hàng',
-        driverName: data.driverName || 'Tài xế',
+        customerName: data.customerName || data.username || 'Khách hàng',
+        username: data.username || data.customerName || 'Khách hàng',
+        customerID: data.customerID || data.customerId || '',
+        driverName: data.driverName || data.name || 'Tài xế',
+        name: data.name || data.driverName || 'Tài xế',
+        driverID: data.driverID || data.driverId || '',
         tripId: data.rideId || data.tripId || '',
         createdAt: data.createdAt,
         ...data
@@ -661,7 +666,16 @@ export function onReviews(callback, maxResults = 100) {
  */
 export async function deleteReview(reviewId) {
   try {
-    await deleteDoc(doc(db, 'reviews', reviewId));
+    // Thử xóa ở cả 2 collection (reviews và notifications)
+    // Vì merge data nên ID có thể thuộc 1 trong 2
+    const reviewRef = doc(db, 'reviews', reviewId);
+    const notifRef = doc(db, 'notifications', reviewId);
+    
+    await Promise.allSettled([
+      deleteDoc(reviewRef),
+      deleteDoc(notifRef)
+    ]);
+    
     return { success: true };
   } catch (error) {
     console.error('Error deleting review:', error);
@@ -738,7 +752,7 @@ export function onDriverReviews(driverId, callback, maxResults = 50) {
   const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
     notifsData = snapshot.docs.map(doc => {
       const data = doc.data();
-      
+
       // Ưu tiên lấy từ trường rating có sẵn, nếu không mới parse từ string
       let rating = data.rating;
       if (rating === undefined || rating === null) {
@@ -761,8 +775,12 @@ export function onDriverReviews(driverId, callback, maxResults = 50) {
         id: doc.id,
         rating: rating,
         comment: comment,
-        customerName: data.customerName || 'Khách hàng',
-        driverName: data.driverName || 'Tài xế',
+        customerName: data.customerName || data.username || 'Khách hàng',
+        username: data.username || data.customerName || 'Khách hàng',
+        customerID: data.customerID || data.customerId || '',
+        driverName: data.driverName || data.name || 'Tài xế',
+        name: data.name || data.driverName || 'Tài xế',
+        driverID: data.driverID || data.driverId || '',
         tripId: data.rideId || data.tripId || '',
         createdAt: data.createdAt,
         ...data
@@ -778,4 +796,48 @@ export function onDriverReviews(driverId, callback, maxResults = 50) {
     unsubReviews();
     unsubNotifs();
   };
+}
+
+/**
+ * Gửi đánh giá mới (Chỉ dành cho Khách hàng đánh giá Tài xế)
+ * Standardized fields: customerID, username, driverID, name
+ */
+export async function submitReview(reviewData) {
+  try {
+    const { 
+      customerID, 
+      username, 
+      driverID, 
+      name, 
+      rating, 
+      comment, 
+      tripId 
+    } = reviewData;
+
+    if (!customerID || !driverID || !rating) {
+      throw new Error('Thiếu thông tin customerID, driverID hoặc rating');
+    }
+
+    const newReview = {
+      customerID,
+      customerId: customerID, // Backward compatibility
+      username: username || 'Khách hàng',
+      customerName: username || 'Khách hàng', // Backward compatibility
+      driverID,
+      driverId: driverID, // Backward compatibility
+      name: name || 'Tài xế',
+      driverName: name || 'Tài xế', // Backward compatibility
+      rating: parseFloat(rating),
+      comment: comment || '',
+      tripId: tripId || '',
+      createdAt: new Date(),
+      type: 'rating'
+    };
+
+    const docRef = await addDoc(collection(db, 'reviews'), newReview);
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    return { success: false, error: error.message };
+  }
 }

@@ -245,7 +245,7 @@ function DriversPage() {
                     <td>
                       <div className="table__rider">
                         <div className="table__rider-avatar">{getInitials(driver.name)}</div>
-                        <span>{driver.name}</span>
+                        <span className="font-medium text-surface-100">{driver.name}</span>
                       </div>
                     </td>
                     <td>

@@ -35,9 +35,13 @@ async function migrateReviews() {
         id: reviewId,
         tripId: rideId,
         customerId: tripData.customerId || '',
+        customerID: tripData.customerId || '', // Standardized field
         customerName: tripData.customerName || 'Khách hàng',
+        username: tripData.customerName || 'Khách hàng', // Standardized field
         driverId: tripData.driverId || '',
+        driverID: tripData.driverId || '',     // Standardized field
         driverName: tripData.driverName || 'Tài xế',
+        name: tripData.driverName || 'Tài xế',          // Standardized field
         rating: tripData.rating,
         comment: tripData.feedback || '',
         createdAt: tripData.completedAt || tripData.createdAt || new Date(),
@@ -83,11 +87,14 @@ async function migrateReviews() {
         await notifDoc.ref.update({
           customerId: notifData.customerId || tripData.customerId || '',
           customerName: notifData.customerName || tripData.customerName || 'Khách hàng',
+          username: notifData.customerName || tripData.customerName || 'Khách hàng', // Consistency
           driverId: notifData.driverId || tripData.driverId || '',
+          driverID: notifData.driverId || tripData.driverId || '', // Consistency
           driverName: notifData.driverName || tripData.driverName || 'Tài xế',
+          name: notifData.driverName || tripData.driverName || 'Tài xế',         // Consistency
           rating: rating || tripData.rating || 5,
           comment: comment,
-          type: 'rating'
+          type: 'info' // Changed to info so drivers don't see "Rate Now"
         });
         notifsUpdated++;
       }

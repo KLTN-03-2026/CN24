@@ -22,8 +22,8 @@ function AccountDetailModal({ user, onClose, onUpdateStatus }) {
             </div>
             <div className="driver-detail__name-block">
               <h3 className="driver-detail__name">{user.name || '—'}</h3>
-              <span className={`driver-detail__status-badge ${user.role === 'driver' ? 'driver-detail__status-badge--online' : 'driver-detail__status-badge--offline'}`} style={{ 
-                background: user.role === 'driver' ? 'var(--primary-600)' : user.role === 'customer' ? 'var(--success-600)' : 'var(--warning-600)' 
+              <span className={`driver-detail__status-badge ${user.role === 'driver' ? 'driver-detail__status-badge--online' : 'driver-detail__status-badge--offline'}`} style={{
+                background: user.role === 'driver' ? 'var(--primary-600)' : user.role === 'customer' ? 'var(--success-600)' : 'var(--warning-600)'
               }}>
                 {user.role === 'driver' ? 'Tài xế' : user.role === 'customer' ? 'Khách hàng' : 'Quản trị viên'}
               </span>
@@ -58,7 +58,7 @@ function AccountDetailModal({ user, onClose, onUpdateStatus }) {
           </div>
 
           <div className="modal__footer" style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-            <button 
+            <button
               className={`confirm-modal__btn ${user.isBlocked ? 'confirm-modal__btn--cancel' : 'confirm-modal__btn--delete'}`}
               style={{ flex: 1, padding: '12px' }}
               onClick={() => onUpdateStatus(user.id, !user.isBlocked)}
@@ -112,9 +112,9 @@ function AccountsPage() {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      result = result.filter(u => 
-        u.name?.toLowerCase().includes(q) || 
-        u.email?.toLowerCase().includes(q) || 
+      result = result.filter(u =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
         u.phone?.includes(q)
       )
     }
@@ -161,19 +161,19 @@ function AccountsPage() {
           />
         </div>
         <div className="rides-toolbar__filters">
-          <button 
+          <button
             className={`rides-toolbar__filter-btn ${roleFilter === 'all' ? 'rides-toolbar__filter-btn--active' : ''}`}
             onClick={() => setRoleFilter('all')}
           >Tất cả</button>
-          <button 
+          <button
             className={`rides-toolbar__filter-btn ${roleFilter === 'driver' ? 'rides-toolbar__filter-btn--active' : ''}`}
             onClick={() => setRoleFilter('driver')}
           >Tài xế</button>
-          <button 
+          <button
             className={`rides-toolbar__filter-btn ${roleFilter === 'customer' ? 'rides-toolbar__filter-btn--active' : ''}`}
             onClick={() => setRoleFilter('customer')}
           >Khách hàng</button>
-          <button 
+          <button
             className={`rides-toolbar__filter-btn ${roleFilter === 'admin' ? 'rides-toolbar__filter-btn--active' : ''}`}
             onClick={() => setRoleFilter('admin')}
           >Admin</button>
@@ -209,9 +209,9 @@ function AccountsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className={`badge ${user.role}`} style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: '4px', 
+                      <span className={`badge ${user.role}`} style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
                         fontSize: '10px',
                         background: user.role === 'driver' ? 'var(--primary-900)' : user.role === 'customer' ? 'var(--success-900)' : 'var(--warning-900)',
                         color: user.role === 'driver' ? 'var(--primary-200)' : user.role === 'customer' ? 'var(--success-200)' : 'var(--warning-200)'
@@ -234,8 +234,8 @@ function AccountsPage() {
                     <td>
                       <div className="rides-table__actions">
                         <button className="rides-table__action-btn" onClick={() => setSelectedUser(user)} title="Xem chi tiết">👁️</button>
-                        <button 
-                          className={`rides-table__action-btn ${user.isBlocked ? 'text-success-500' : 'text-danger-500'}`} 
+                        <button
+                          className={`rides-table__action-btn ${user.isBlocked ? 'text-success-500' : 'text-danger-500'}`}
                           onClick={() => handleUpdateStatus(user.id, !user.isBlocked)}
                           title={user.isBlocked ? "Mở khóa" : "Khóa tài khoản"}
                         >
@@ -252,9 +252,9 @@ function AccountsPage() {
       </div>
 
       {selectedUser && (
-        <AccountDetailModal 
-          user={selectedUser} 
-          onClose={() => setSelectedUser(null)} 
+        <AccountDetailModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
           onUpdateStatus={handleUpdateStatus}
         />
       )}

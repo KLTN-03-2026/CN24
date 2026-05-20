@@ -46,7 +46,7 @@ function RecentTrips({ trips }) {
                         <span className="table__rider-name">{trip.customerName || '—'}</span>
                       </div>
                     </td>
-                    <td>{trip.driverName || '—'}</td>
+                    <td className="font-medium text-surface-100">{trip.driverName || '—'}</td>
                     <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                       title={trip.pickupAddress}>
                       {trip.pickupAddress || '—'}

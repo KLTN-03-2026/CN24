@@ -56,7 +56,7 @@ function CustomerDetailModal({ customer, onClose }) {
             </div>
             <div className="trip-detail__row">
               <span className="trip-detail__label">🆔 User ID</span>
-              <span className="trip-detail__value" style={{ fontSize: 'var(--font-xs)', color: 'var(--surface-500)' }}>{customer.id}</span>
+              <span className="trip-detail__value" style={{ fontSize: 'var(--font-sm)', color: 'var(--surface-500)' }}>{customer.id}</span>
             </div>
           </div>
         </div>

@@ -16,7 +16,7 @@ const ReviewDetailModal = ({ review, onClose, onDelete, isDeleting }) => {
 
   const renderStars = (rating) => {
     return Array.from({ length: 5 }).map((_, i) => (
-      <span key={i} style={{ color: i < rating ? 'var(--warning-400)' : 'var(--surface-600)', fontSize: '1.2rem' }}>
+      <span key={i} style={{ color: i < rating ? 'var(--warning-400)' : 'var(--surface-600)', fontSize: '1.5rem' }}>
         {i < rating ? '★' : '☆'}
       </span>
     ));
@@ -51,7 +51,7 @@ const ReviewDetailModal = ({ review, onClose, onDelete, isDeleting }) => {
             <div className="trip-detail__row">
               <span className="trip-detail__label">👤 Khách hàng</span>
               <div className="flex items-center gap-3">
-                <div className="table__rider-avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                <div className="table__rider-avatar" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
                   {getInitials(review.customerName)}
                 </div>
                 <span className="trip-detail__value">{review.customerName || '—'}</span>
@@ -61,7 +61,7 @@ const ReviewDetailModal = ({ review, onClose, onDelete, isDeleting }) => {
             <div className="trip-detail__row">
               <span className="trip-detail__label">👨‍✈️ Tài xế</span>
               <div className="flex items-center gap-3">
-                <div className="table__rider-avatar" style={{ width: '32px', height: '32px', fontSize: '12px', background: 'var(--primary-600)' }}>
+                <div className="table__rider-avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: 'var(--primary-600)' }}>
                   {getInitials(review.driverName)}
                 </div>
                 <span className="trip-detail__value">{review.driverName || '—'}</span>
@@ -70,7 +70,7 @@ const ReviewDetailModal = ({ review, onClose, onDelete, isDeleting }) => {
 
             <div className="trip-detail__row">
               <span className="trip-detail__label">🚗 Mã chuyến đi</span>
-              <span className="trip-detail__value font-mono text-xs">{review.tripId?.toUpperCase() || '—'}</span>
+              <span className="trip-detail__value font-mono text-sm">{review.tripId?.toUpperCase() || '—'}</span>
             </div>
 
             <div className="trip-detail__divider" />
@@ -127,7 +127,7 @@ const ReviewDetailModal = ({ review, onClose, onDelete, isDeleting }) => {
           position: absolute;
           top: 0;
           left: 8px;
-          font-size: 40px;
+          font-size: 50px;
           opacity: 0.1;
           font-family: serif;
         }
@@ -213,7 +213,7 @@ const ReviewsPage = () => {
     return (
       <div className="flex gap-0.5 text-warning-400">
         {Array.from({ length: 5 }).map((_, i) => (
-          <span key={i} style={{ fontSize: '0.85rem' }}>
+          <span key={i} style={{ fontSize: '1.1rem' }}>
             {i < rating ? '★' : '☆'}
           </span>
         ))}
@@ -296,7 +296,7 @@ const ReviewsPage = () => {
                 {filteredReviews.length === 0 ? (
                   <tr>
                     <td colSpan="6" style={{ textAlign: 'center', padding: '64px', color: 'var(--surface-500)' }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🔍</div>
+                      <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🔍</div>
                       Không tìm thấy đánh giá nào.
                     </td>
                   </tr>
@@ -305,7 +305,7 @@ const ReviewsPage = () => {
                     <tr key={r.id} className="hover:bg-surface-800/30 transition-colors">
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="table__rider-avatar" style={{ width: '28px', height: '28px', fontSize: '10px' }}>
+                          <div className="table__rider-avatar" style={{ width: '36px', height: '36px', fontSize: '14px' }}>
                             {getInitials(r.customerName)}
                           </div>
                           <span className="font-medium text-surface-100">{r.customerName}</span>
@@ -313,7 +313,7 @@ const ReviewsPage = () => {
                       </td>
                       <td>
                         <button 
-                          className="text-surface-300 hover:text-primary-400 transition-colors text-left"
+                          className="text-surface-100 hover:text-primary-400 font-medium transition-colors text-left"
                           onClick={() => setSearchQuery(r.driverName || '')}
                           title={`Lọc theo tài xế ${r.driverName}`}
                         >
@@ -327,11 +327,11 @@ const ReviewsPage = () => {
                         </div>
                       </td>
                       <td style={{ maxWidth: '300px' }}>
-                        <p className="truncate-2 text-surface-200 text-sm italic">
+                        <p className="truncate-2 text-surface-200 text-base italic">
                           {r.comment ? `"${r.comment}"` : '—'}
                         </p>
                       </td>
-                      <td className="text-xs opacity-70">
+                      <td className="text-sm opacity-70">
                         {r.createdAt?.toDate ? format(r.createdAt.toDate(), 'dd/MM/yyyy HH:mm') : '-'}
                       </td>
                       <td>

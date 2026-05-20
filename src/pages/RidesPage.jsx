@@ -300,7 +300,7 @@ function RidesPage() {
                         {trip.id?.slice(0, 8).toUpperCase()}
                       </td>
                       <td>{trip.customerName}</td>
-                      <td>{trip.driverName || '—'}</td>
+                      <td className="font-medium text-surface-100">{trip.driverName || '—'}</td>
                       <td>{trip.pickupAddress}</td>
                       <td>{trip.destinationAddress}</td>
                       <td>{formatFare(trip.fare)}</td>

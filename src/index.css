@@ -51,15 +51,15 @@
 
   /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-xs: 0.75rem;
-  --font-sm: 0.875rem;
+  --font-xs: 0.8rem;
+  --font-sm: 0.9rem;
   --font-base: 1rem;
-  --font-lg: 1.125rem;
-  --font-xl: 1.25rem;
-  --font-2xl: 1.5rem;
-  --font-3xl: 1.875rem;
-  --font-4xl: 2.25rem;
-  --font-5xl: 3rem;
+  --font-lg: 1.2rem;
+  --font-xl: 1.4rem;
+  --font-2xl: 1.8rem;
+  --font-3xl: 2.2rem;
+  --font-4xl: 2.8rem;
+  --font-5xl: 3.5rem;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -106,7 +106,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 23px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
@@ -219,3 +219,28 @@ img {
 .animate-slideInLeft {
   animation: slideInLeft 0.4s ease-out forwards;
 }
+
+/* ===== Utility Classes ===== */
+.text-surface-50 { color: var(--surface-50); }
+.text-surface-100 { color: var(--surface-100); }
+.text-surface-200 { color: var(--surface-200); }
+.text-surface-300 { color: var(--surface-300); }
+.text-surface-400 { color: var(--surface-400); }
+.text-surface-500 { color: var(--surface-500); }
+.text-primary-400 { color: var(--primary-400); }
+.text-primary-500 { color: var(--primary-500); }
+.text-warning-400 { color: var(--warning-400); }
+.text-danger-400 { color: var(--danger-400); }
+.text-success-400 { color: var(--success-400); }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.font-extrabold { font-weight: 800; }
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }

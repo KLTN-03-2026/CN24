@@ -165,7 +165,7 @@ function MapPage({ drivers = [], trips = [] }) {
           <div class="marker-content" style="position: relative; width: 44px; height: 64px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
             <img src="/images/motorcycle-top.png" alt="driver" style="width: 40px; height: 58px; object-fit: contain; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); pointer-events: none;" />
             <div class="status-dot" style="position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: ${statusColor}; border: 2px solid white; box-shadow: 0 0 6px ${statusColor}88;"></div>
-            ${isSimulated ? '<div style="position: absolute; top: -5px; right: -8px; background: #f59e0b; color: white; font-size: 7px; padding: 1px 3px; border-radius: 3px; font-weight: bold; border: 1px solid white;">SIM</div>' : ''}
+            ${isSimulated ? '<div style="position: absolute; top: -5px; right: -8px; background: #f59e0b; color: white; font-size: 10px; padding: 1px 3px; border-radius: 3px; font-weight: bold; border: 1px solid white;">SIM</div>' : ''}
           </div>
         `
 
@@ -177,12 +177,12 @@ function MapPage({ drivers = [], trips = [] }) {
           className: 'driver-popup'
         }).setHTML(`
           <div style="padding: 10px 14px; min-width: 140px; text-align: center;">
-            <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #0f172a;">${driver.name || driver.fullName || 'Tài xế'}</div>
+            <div style="font-weight: 700; font-size: 20px; margin-bottom: 6px; color: #0f172a;">${driver.name || driver.fullName || 'Tài xế'}</div>
             <div style="display: inline-flex; align-items: center; gap: 6px; background: ${driverStatus === 'available' ? '#dcfce7' : driverStatus === 'busy' ? '#fee2e2' : '#f1f5f9'}; padding: 4px 12px; border-radius: 20px;">
-              <span style="font-size: 10px;">${statusIcon}</span>
-              <span style="font-size: 13px; color: ${statusColor}; font-weight: 700; letter-spacing: 0.5px;">${label}</span>
+              <span style="font-size: 14px;">${statusIcon}</span>
+              <span style="font-size: 18px; color: ${statusColor}; font-weight: 700; letter-spacing: 0.5px;">${label}</span>
             </div>
-            ${driver.vehiclePlate ? '<div style="font-size: 11px; color: #64748b; margin-top: 6px;">BSX: ' + driver.vehiclePlate + '</div>' : ''}
+            ${driver.vehiclePlate ? '<div style="font-size: 14px; color: #64748b; margin-top: 6px;">BSX: ' + driver.vehiclePlate + '</div>' : ''}
           </div>
         `)
 
@@ -258,7 +258,7 @@ function MapPage({ drivers = [], trips = [] }) {
               alignItems: 'center', justifyContent: 'center',
               background: 'rgba(15, 23, 42, 0.9)', zIndex: 10, color: 'white', textAlign: 'center', padding: '20px'
             }}>
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
+              <div style={{ fontSize: '4rem', marginBottom: '16px' }}>⚠️</div>
               <h3 style={{ marginBottom: '8px' }}>Không thể hiển thị bản đồ</h3>
               <p style={{ color: 'var(--surface-400)', maxWidth: '400px', marginBottom: '20px' }}>{mapError}</p>
               <button onClick={() => window.location.reload()}
@@ -277,8 +277,8 @@ function MapPage({ drivers = [], trips = [] }) {
           }}>
             <div style={{ animation: 'spin 4s linear infinite', color: 'var(--primary-400)' }}>{Icons.refresh}</div>
             <div>
-              <div style={{ fontSize: '10px', color: 'var(--surface-500)', textTransform: 'uppercase', letterSpacing: '1px' }}>TrackAsia Live Engine</div>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>Đà Nẵng, Việt Nam</div>
+              <div style={{ fontSize: '14px', color: 'var(--surface-500)', textTransform: 'uppercase', letterSpacing: '1px' }}>TrackAsia Live Engine</div>
+              <div style={{ fontSize: '18px', fontWeight: 600 }}>Đà Nẵng, Việt Nam</div>
             </div>
           </div>
         </div>
@@ -289,8 +289,8 @@ function MapPage({ drivers = [], trips = [] }) {
           border: '1px solid var(--surface-800)', display: 'flex', flexDirection: 'column', overflow: 'hidden'
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--surface-800)' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              📍 Vị trí tài xế <span style={{ fontSize: '12px', color: 'var(--surface-400)', fontWeight: 400 }}>({drivers.length})</span>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📍 Vị trí tài xế <span style={{ fontSize: '16px', color: 'var(--surface-400)', fontWeight: 400 }}>({drivers.length})</span>
             </h3>
           </div>
 
@@ -333,12 +333,12 @@ function MapPage({ drivers = [], trips = [] }) {
                           🏍️
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{driver.name || driver.fullName || 'Tài xế'}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--surface-400)' }}>{driver.vehiclePlate || '—'}</div>
+                          <div style={{ fontWeight: 600, fontSize: '18px' }}>{driver.name || driver.fullName || 'Tài xế'}</div>
+                          <div style={{ fontSize: '14px', color: 'var(--surface-400)' }}>{driver.vehiclePlate || '—'}</div>
                         </div>
                       </div>
                       <span style={{
-                        padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
+                        padding: '4px 14px', borderRadius: '16px', fontSize: '14px', fontWeight: 700,
                         background: isOnline ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)',
                         color: isOnline ? '#22c55e' : '#94a3b8',
                         border: `1px solid ${isOnline ? '#22c55e44' : '#94a3b844'}`
