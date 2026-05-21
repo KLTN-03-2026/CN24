@@ -44,6 +44,22 @@ class AuthController extends GetxController {
     super.onInit();
     _user.bindStream(_authService.authStateChanges);
     ever<User?>(_user, _handleAuthStateChange);
+    ever<UserModel?>(userModelRx, _handleUserModelChange);
+  }
+
+  void _handleUserModelChange(UserModel? userModel) {
+    if (userModel != null &&
+        (userModel.isBlocked == true ||
+            userModel.status == 'tài khoản đã bị khóa')) {
+      signOut();
+      Get.snackbar(
+        'Tài khoản bị khóa',
+        'Tài khoản của bạn đã bị khóa bởi quản trị viên.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Future<void> _handleAuthStateChange(User? user) async {
@@ -102,6 +118,12 @@ class AuthController extends GetxController {
         email,
         password,
       );
+
+      if (userModel.isBlocked == true || userModel.status == 'tài khoản đã bị khóa') {
+        await _authService.logOut();
+        throw 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.';
+      }
+
       userModelRx.value = userModel;
       userModelRx.bindStream(_authService.watchUserModel(userModel.id));
 
@@ -126,7 +148,12 @@ class AuthController extends GetxController {
       }
     } catch (e) {
       _error.value = e.toString();
-      Get.snackbar('Đăng nhập thất bại', 'Sai email hoặc mật khẩu.');
+      String errorMsg = e.toString().replaceFirst('Exception: ', '');
+      if (errorMsg.contains('bị khóa')) {
+        Get.snackbar('Đăng nhập thất bại', errorMsg);
+      } else {
+        Get.snackbar('Đăng nhập thất bại', 'Sai email hoặc mật khẩu.');
+      }
     } finally {
       _isAuthenticating = false;
       _isLoading.value = false;

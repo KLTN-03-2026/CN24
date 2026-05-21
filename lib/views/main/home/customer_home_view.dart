@@ -61,6 +61,7 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
           // Top Search UI
           SafeArea(
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 Positioned(
                   top: 10, left: 15, right: 68,
@@ -82,7 +83,13 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
               return FloatingActionButton(
                 heroTag: 'customer_loc_fab', // Unique tag
                 backgroundColor: theme.cardColor,
-                onPressed: () => controller.mapController.move(controller.currentLocation.value!, 17),
+                onPressed: () {
+                  try {
+                    controller.mapController.move(controller.currentLocation.value!, 17);
+                  } catch (e) {
+                    debugPrint('CustomerHomeView: error moving map: $e');
+                  }
+                },
                 child: Icon(Icons.my_location, color: theme.primaryColor),
               );
             }),
@@ -98,14 +105,17 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
   Widget _buildSearchHeader(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
           decoration: AppTheme.homeCardDecoration(context),
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildAddressField(context, controller.pickupController, 'enter_pickup'.tr, Colors.green, true),
                   const SizedBox(height: 25),
@@ -188,17 +198,27 @@ class CustomerHomeView extends GetView<CustomerHomeController> {
         margin: const EdgeInsets.only(top: 10),
         constraints: const BoxConstraints(maxHeight: 200),
         decoration: AppTheme.homeCardDecoration(context),
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: controller.searchResults.length,
-          itemBuilder: (context, index) {
-            final result = controller.searchResults[index];
-            return ListTile(
-              title: Text(result['display_name'] ?? '', style: const TextStyle(fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
-              leading: const Icon(Icons.location_on_outlined, size: 20),
-              onTap: () => controller.selectLocation(result),
-            );
-          },
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          child: ListView.builder(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: controller.searchResults.length,
+            itemBuilder: (context, index) {
+              final result = controller.searchResults[index];
+              return ListTile(
+                title: Text(
+                  result['display_name'] ?? '',
+                  style: const TextStyle(fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                leading: const Icon(Icons.location_on_outlined, size: 20),
+                onTap: () => controller.selectLocation(result),
+              );
+            },
+          ),
         ),
       );
     });

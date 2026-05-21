@@ -33,7 +33,7 @@ def get_intent_response(text: str) -> str:
     # 7. An toàn
     if re.search(r'(an toàn|bảo hiểm|mũ bảo hiểm|tai nạn|an toan)', text):
         return "🛡️ **Quy định an toàn:**\n- Luôn đội mũ bảo hiểm khi ngồi trên xe.\n- Kiểm tra biển số xe và ảnh tài xế trước khi lên xe.\n- Chia sẻ hành trình cho người thân nếu cần thiết."
-        
+
     # 8. Tài khoản
     if re.search(r'(tài khoản|mật khẩu|đăng ký|quên pass|thông tin)', text):
         return "👤 **Hỗ trợ tài khoản:**\n- Bạn có thể chỉnh sửa thông tin trong mục 'Hồ sơ'.\n- Nếu quên mật khẩu, hãy dùng chức năng 'Quên mật khẩu' tại màn hình đăng nhập."

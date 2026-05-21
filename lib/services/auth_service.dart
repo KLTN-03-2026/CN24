@@ -132,6 +132,8 @@ class AuthService {
         isOnline: role == UserRole.driver ? false : null,
         isAvailable: role == UserRole.driver ? false : null,
         createdAt: DateTime.now(),
+        isBlocked: false,
+        status: 'Hoạt động',
       );
 
       debugPrint('[AuthService] Creating Firestore user for uid=${user.uid}');

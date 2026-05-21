@@ -166,6 +166,8 @@ class UserModel {
   final DateTime createdAt;
   final String? language;
   final String? theme;
+  final bool? isBlocked;
+  final String? status;
 
   UserModel({
     required this.id,
@@ -187,6 +189,8 @@ class UserModel {
     required this.createdAt,
     this.language,
     this.theme,
+    this.isBlocked,
+    this.status,
   });
 
   static DateTime _parseCreatedAt(dynamic value) {
@@ -217,6 +221,8 @@ class UserModel {
       createdAt: _parseCreatedAt(json['createdAt']),
       language: json['language'],
       theme: json['theme'],
+      isBlocked: json['isBlocked'],
+      status: json['status'],
     );
   }
 
@@ -243,6 +249,8 @@ class UserModel {
     if (isAvailable != null) map['isAvailable'] = isAvailable;
     if (latitude != null) map['latitude'] = latitude;
     if (longitude != null) map['longitude'] = longitude;
+    if (isBlocked != null) map['isBlocked'] = isBlocked;
+    if (status != null) map['status'] = status;
 
     return map;
   }
@@ -268,6 +276,8 @@ class UserModel {
       createdAt: _parseCreatedAt(map['createdAt']),
       language: map['language'],
       theme: map['theme'],
+      isBlocked: map['isBlocked'],
+      status: map['status'],
     );
   }
 
@@ -291,6 +301,8 @@ class UserModel {
     DateTime? createdAt,
     String? language,
     String? theme,
+    bool? isBlocked,
+    String? status,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -312,6 +324,8 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       language: language ?? this.language,
       theme: theme ?? this.theme,
+      isBlocked: isBlocked ?? this.isBlocked,
+      status: status ?? this.status,
     );
   }
 }

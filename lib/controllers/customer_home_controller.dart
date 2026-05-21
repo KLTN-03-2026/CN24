@@ -92,7 +92,11 @@ class CustomerHomeController extends GetxController {
 
       // Update map camera
       Future.delayed(const Duration(milliseconds: 500), () {
-        mapController.move(currentLocation.value!, 15);
+        try {
+          mapController.move(currentLocation.value!, 15);
+        } catch (e) {
+          debugPrint('Error moving map to initial location: $e');
+        }
       });
 
       _locationService.getPositionStream().listen((pos) {
@@ -202,7 +206,11 @@ class CustomerHomeController extends GetxController {
     }
 
     clearSearchResults();
-    mapController.move(pos, 15);
+    try {
+      mapController.move(pos, 15);
+    } catch (e) {
+      debugPrint('Error moving map in selectLocation: $e');
+    }
 
     // Chỉ cần có điểm đến (hoặc điểm đón mới) là tính toán đường đi ngay
     if (searchedLocation.value != null ||

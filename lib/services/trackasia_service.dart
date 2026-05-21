@@ -6,8 +6,15 @@ import '../models/trackasia_place.dart';
 class TrackAsiaService {
   // To avoid --dart-define issues during testing, we add a fallback key
   static const String _fallbackKey = 'dff36ce825dbdb5a17750650297977c46b';
+  static const String _envKey = String.fromEnvironment('TRACKASIA_KEY');
   
-  static const String _apiKey = String.fromEnvironment('TRACKASIA_KEY', defaultValue: _fallbackKey);
+  static String get _apiKey {
+    if (_envKey.isEmpty || _envKey == 'null' || _envKey == 'default') {
+      return _fallbackKey;
+    }
+    return _envKey;
+  }
+  
   static const String _baseUrl = 'https://maps.track-asia.com/api/v1';
 
   /// Check if the API key is validly provided

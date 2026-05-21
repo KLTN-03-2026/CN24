@@ -68,7 +68,11 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
       final initial = LatLng(pos.latitude, pos.longitude);
       if (mounted) {
         setState(() => _driverLocation = initial);
-        _mapController.move(initial, 15);
+        try {
+          _mapController.move(initial, 15);
+        } catch (e) {
+          debugPrint('DriverNav: error moving map initially: $e');
+        }
         _fetchRoute(initial);
       }
     } catch (e) {
@@ -710,7 +714,11 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
               backgroundColor: Colors.white,
               onPressed: () {
                 if (_driverLocation != null) {
-                  _mapController.move(_driverLocation!, 17);
+                  try {
+                    _mapController.move(_driverLocation!, 17);
+                  } catch (e) {
+                    debugPrint('DriverNav: error centering map: $e');
+                  }
                 }
               },
               child: const Icon(Icons.my_location, color: Colors.blue),
