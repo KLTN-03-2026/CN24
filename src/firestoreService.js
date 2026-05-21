@@ -352,6 +352,7 @@ export async function updateUserStatus(userId, isBlocked) {
   try {
     await updateDoc(doc(db, 'users', userId), {
       isBlocked: isBlocked,
+      status: isBlocked ? 'tài khoản đã bị khóa' : 'Hoạt động',
       updatedAt: new Date()
     });
     return { success: true };
